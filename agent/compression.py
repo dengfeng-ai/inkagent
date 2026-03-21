@@ -3,9 +3,8 @@
 import json
 import logging
 
-import anthropic
-
 from agent.prompts import SUMMARY_PROMPT
+from agent.providers import get_provider, get_small_model, LLMError
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +13,6 @@ MAX_CONTEXT_TOKENS = 200_000
 COMPRESS_THRESHOLD = 160_000  # trigger compression at 80% capacity
 CHARS_PER_TOKEN = 4  # rough estimate
 KEEP_RECENT_MESSAGES = 6  # preserve last 3 turns (user+assistant pairs)
-
-COMPRESSION_MODEL = "claude-haiku-4-5-20251001"
-
-_client = anthropic.Anthropic()
 
 
 def estimate_tokens(system: str, messages: list[dict], tools: list[dict]) -> int:
@@ -53,19 +48,18 @@ def _format_messages_for_summary(messages: list[dict]) -> str:
 
 
 def _summarize_messages(messages: list[dict]) -> str:
-    """Use Haiku to summarize old conversation messages."""
+    """Use a small model to summarize old conversation messages."""
     text = _format_messages_for_summary(messages)
     prompt = SUMMARY_PROMPT.format(conversation=text)
 
     logger.info("Summarizing %d messages for context compression", len(messages))
     try:
-        response = _client.messages.create(
-            model=COMPRESSION_MODEL,
+        return get_provider().simple_complete(
+            model=get_small_model(),
+            prompt=prompt,
             max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}],
         )
-        return response.content[0].text.strip()
-    except anthropic.APIError as e:
+    except LLMError as e:
         logger.error("Summarization API call failed: %s", e)
         return f"[Summary unavailable — earlier conversation context was dropped]\n{text[:500]}"
 
@@ -73,8 +67,8 @@ def _summarize_messages(messages: list[dict]) -> str:
 def maybe_compress(conversation: list[dict], system: str, tools: list[dict]) -> None:
     """Compress conversation history if approaching context window limit.
 
-    Replaces old messages with a Haiku-generated summary, keeping recent
-    messages intact. Modifies conversation list in place.
+    Replaces old messages with a summary, keeping recent messages intact.
+    Modifies conversation list in place.
     """
     estimated = estimate_tokens(system, conversation, tools)
     if estimated < COMPRESS_THRESHOLD:

@@ -1,21 +1,22 @@
 # inkagent
 
-A lightweight personal AI agent that runs locally on your machine. Powered by Claude, driven by Markdown memory.
+A lightweight personal AI agent that runs locally on your machine. Powered by Claude or OpenAI, driven by Markdown memory.
 
 Inspired by [OpenClaw](https://github.com/nichochar/open-claw). Built in Python.
 
 ## Features
 
-- **Agentic tool-use loop** — sends your message to Claude, executes tools, feeds results back, repeats until done
+- **Agentic tool-use loop** — sends your message to the LLM, executes tools, feeds results back, repeats until done
 - **Markdown memory** — persona, user profile, long-term memory, daily logs — all plain `.md` files you can read and edit
-- **Auto memory promotion** — daily logs are curated into long-term memory overnight via Haiku
+- **Auto memory promotion** — daily logs are curated into long-term memory overnight via a small model
+- **Multi-provider** — supports Anthropic (Claude) and OpenAI out of the box, switchable via env var
 - **Self-registering skills** — add capabilities by dropping in a decorated Python function
 - **Two interfaces** — CLI (`main.py`) or Telegram bot (`bot.py`)
 - **Observability** — optional [Langfuse](https://langfuse.com) tracing for all LLM calls and tool executions
 
 ## Quick Start
 
-Requires **Python 3.11+** and an [Anthropic API key](https://console.anthropic.com/).
+Requires **Python 3.11+** and an API key from [Anthropic](https://console.anthropic.com/) or [OpenAI](https://platform.openai.com/).
 
 ```bash
 git clone https://github.com/yourname/inkagent.git
@@ -32,10 +33,15 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and fill in your API key:
+Edit `.env` and fill in your provider config:
 
 ```bash
+# Anthropic (default)
 ANTHROPIC_API_KEY=sk-ant-xxxxx
+
+# — or OpenAI —
+# OPENAI_API_KEY=sk-xxxxx
+# LLM_PROVIDER=openai
 ```
 
 Run:
@@ -79,13 +85,17 @@ inkagent/
 ├── main.py              # CLI entry point
 ├── bot.py               # Telegram bot entry point
 ├── agent/
-│   ├── brain.py         # Agentic loop (tool_use)
+│   ├── brain.py         # Agentic loop (provider-agnostic)
 │   ├── memory.py        # Markdown memory (read/write)
 │   ├── registry.py      # Skill registration
 │   ├── prompts.py       # Prompt templates
 │   ├── session.py       # Conversation history + persistence
 │   ├── compression.py   # Context window compression
-│   └── promotion.py     # Daily log → long-term memory promotion
+│   ├── promotion.py     # Daily log → long-term memory promotion
+│   └── providers/       # Pluggable LLM providers
+│       ├── base.py      # LLMProvider ABC + shared types
+│       ├── anthropic.py # Anthropic (Claude)
+│       └── openai.py    # OpenAI
 ├── skills/
 │   ├── shell.py         # run_shell
 │   ├── profile.py       # update_soul, update_user_profile
@@ -154,7 +164,11 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Claude API key |
+| `ANTHROPIC_API_KEY` | For Anthropic | Claude API key |
+| `OPENAI_API_KEY` | For OpenAI | OpenAI API key |
+| `LLM_PROVIDER` | No | `anthropic` (default) or `openai` |
+| `LLM_MODEL` | No | Main model (default: `claude-sonnet-4-20250514` / `gpt-4o`) |
+| `LLM_SMALL_MODEL` | No | Cheap model for compression/promotion (default: `claude-haiku-4-5-20251001` / `gpt-4o-mini`) |
 | `TELEGRAM_BOT_TOKEN` | For bot | Telegram bot token from @BotFather |
 | `TELEGRAM_OWNER_ID` | For bot | Your numeric Telegram user ID |
 | `LANGFUSE_PUBLIC_KEY` | No | Langfuse observability |

@@ -12,12 +12,16 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
-import anthropic  # noqa: E402
 from agent.brain import run_agent  # noqa: E402
+from agent.providers import LLMError  # noqa: E402
 
 
 def main() -> None:
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    provider = os.environ.get("LLM_PROVIDER", "anthropic").lower()
+    if provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
+        print("Error: OPENAI_API_KEY is not set. Check your .env file.")
+        sys.exit(1)
+    elif provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
         print("Error: ANTHROPIC_API_KEY is not set. Check your .env file.")
         sys.exit(1)
 
@@ -37,7 +41,7 @@ def main() -> None:
 
         try:
             response = run_agent(user_input)
-        except anthropic.APIError as e:
+        except LLMError as e:
             print(f"\n[API error: {e}]\n")
             continue
 

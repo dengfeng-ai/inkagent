@@ -14,9 +14,8 @@ from telegram.ext import (
     filters,
 )
 
-import anthropic
-
 from agent.brain import run_agent
+from agent.providers import LLMError
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -73,7 +72,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     typing_task = asyncio.create_task(keep_typing())
     try:
         reply = await asyncio.to_thread(run_agent, user_text, session_id)
-    except anthropic.APIError as e:
+    except LLMError as e:
         logger.error("API call failed in session %s: %s", session_id, e)
         reply = f"[API error: {e}]"
     finally:
@@ -89,7 +88,10 @@ def main() -> None:
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not bot_token:
         raise SystemExit("Error: TELEGRAM_BOT_TOKEN is not set. Check your .env file.")
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    provider = os.environ.get("LLM_PROVIDER", "anthropic").lower()
+    if provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
+        raise SystemExit("Error: OPENAI_API_KEY is not set. Check your .env file.")
+    elif provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
         raise SystemExit("Error: ANTHROPIC_API_KEY is not set. Check your .env file.")
     owner_id = _get_owner_id()
 

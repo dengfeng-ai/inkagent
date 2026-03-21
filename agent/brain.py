@@ -1,8 +1,7 @@
-"""LLM agentic loop using Claude tool_use."""
+"""LLM agentic loop using pluggable provider."""
 
 import logging
 
-import anthropic
 from langfuse import observe, get_client as get_langfuse
 
 from agent import registry, memory
@@ -10,14 +9,12 @@ from agent.prompts import SYSTEM_PROMPT
 from agent.session import get_conversation, save_conversation
 from agent.compression import maybe_compress
 from agent.promotion import maybe_promote
+from agent.providers import get_provider, get_model, LLMError
 
 logger = logging.getLogger(__name__)
 
 # Import skills so they self-register — never import skills directly here.
 import skills  # noqa: F401
-
-client = anthropic.Anthropic()
-MODEL = "claude-sonnet-4-20250514"
 
 
 @observe()
@@ -40,7 +37,11 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
         long_term_memory=long_term_memory if long_term_memory else "(no memories yet)",
         daily_logs=daily_logs if daily_logs else "(no daily logs yet)",
     )
-    tools = registry.get_tools()
+
+    provider = get_provider()
+    model = get_model()
+    raw_tools = registry.get_tools()
+    tools = provider.format_tools(raw_tools)
 
     # Compress conversation if approaching context window limit.
     maybe_compress(conversation, system, tools)
@@ -51,38 +52,32 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
 
     try:
         while True:
-            response = _call_llm(system, messages, tools)
+            response = _call_llm(system, messages, tools, model)
 
             if response.stop_reason == "tool_use":
-                assistant_content = response.content
+                if response.text:
+                    collected_text.append(response.text)
 
-                # Capture text blocks before processing tools.
-                for block in assistant_content:
-                    if block.type == "text" and block.text.strip():
-                        collected_text.append(block.text)
-
-                messages.append({"role": "assistant", "content": assistant_content})
+                messages.append(provider.assistant_message(response))
 
                 tool_results = []
-                for block in assistant_content:
-                    if block.type == "tool_use":
-                        result = _execute_tool(block.name, block.input)
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": result,
-                        })
+                for tc in response.tool_calls:
+                    result = _execute_tool(tc.name, tc.input)
+                    tool_results.append({
+                        "tool_call_id": tc.id,
+                        "content": result,
+                    })
 
-                messages.append({"role": "user", "content": tool_results})
+                messages.extend(provider.tool_results_messages(tool_results))
             else:
                 # end_turn — combine collected text with final response text.
-                text_parts = [b.text for b in response.content if b.type == "text"]
-                reply = "\n".join(collected_text + text_parts).strip()
+                parts = collected_text + ([response.text] if response.text else [])
+                reply = "\n".join(parts).strip()
                 conversation.append({"role": "assistant", "content": reply})
                 save_conversation(session_id)
                 get_langfuse().update_current_span(output=reply)
                 return reply
-    except anthropic.APIError as e:
+    except LLMError as e:
         logger.error("API call failed: %s", e)
         if conversation and conversation[-1].get("role") == "user":
             conversation.pop()
@@ -90,23 +85,24 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
 
 
 @observe(as_type="generation")
-def _call_llm(system: str, messages: list, tools: list) -> anthropic.types.Message:
-    """Call Claude API — tracked as a generation span in Langfuse."""
+def _call_llm(system: str, messages: list, tools: list, model: str):
+    """Call LLM via provider — tracked as a generation span in Langfuse."""
+    provider = get_provider()
     lf = get_langfuse()
     lf.update_current_generation(
-        model=MODEL,
+        model=model,
         input={"system": system, "messages": messages, "tools": tools},
         model_parameters={"max_tokens": 4096},
     )
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4096,
+    response = provider.complete(
+        model=model,
         system=system,
         messages=messages,
         tools=tools,
+        max_tokens=4096,
     )
     lf.update_current_generation(
-        output=response.content,
+        output=response.text,
         usage_details={
             "input": response.usage.input_tokens,
             "output": response.usage.output_tokens,
