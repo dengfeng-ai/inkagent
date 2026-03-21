@@ -50,10 +50,17 @@ docker run --env-file .env inkagent python bot.py
 持久化 `memory/` 和 `conversations/`，避免容器重启后数据丢失：
 
 ```bash
+# CLI mode
 docker run -it --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
   inkagent
+
+# Telegram bot mode
+docker run --env-file .env \
+  -v $(pwd)/memory:/app/memory \
+  -v $(pwd)/conversations:/app/conversations \
+  inkagent python bot.py
 ```
 
 ### Option B: Local
