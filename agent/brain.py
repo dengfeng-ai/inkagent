@@ -33,29 +33,37 @@ Do NOT save transient info (current tasks, project stats, session context) to an
 client = anthropic.Anthropic()
 MODEL = "claude-sonnet-4-20250514"
 
-# In-memory conversation history for the current session.
-_conversation: list[dict] = []
-
-# Session file path — created on first message.
-_session_file: Path | None = None
+# Per-session conversation history and file paths.
+_sessions: dict[str, list[dict]] = {}
+_session_files: dict[str, Path] = {}
 
 
-def _save_conversation() -> None:
+def _get_conversation(session_id: str) -> list[dict]:
+    """Get or create conversation history for a session."""
+    if session_id not in _sessions:
+        _sessions[session_id] = []
+    return _sessions[session_id]
+
+
+def _save_conversation(session_id: str) -> None:
     """Save conversation to the session JSON file."""
-    global _session_file
-    if not _session_file:
+    if session_id not in _session_files:
         CONVERSATIONS_DIR.mkdir(exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        _session_file = CONVERSATIONS_DIR / f"{timestamp}.json"
-    _session_file.write_text(json.dumps(_conversation, ensure_ascii=False, indent=2))
+        _session_files[session_id] = CONVERSATIONS_DIR / f"{timestamp}_{session_id}.json"
+    conversation = _sessions.get(session_id, [])
+    _session_files[session_id].write_text(
+        json.dumps(conversation, ensure_ascii=False, indent=2)
+    )
 
 
 @observe()
-def run_agent(user_input: str) -> str:
+def run_agent(user_input: str, session_id: str = "cli") -> str:
     """Run one full agentic turn: send message, loop on tool calls, return final text."""
     get_langfuse().update_current_span(input=user_input)
 
-    _conversation.append({"role": "user", "content": user_input})
+    conversation = _get_conversation(session_id)
+    conversation.append({"role": "user", "content": user_input})
 
     soul = memory.get_soul()
     user_profile = memory.get_user_profile()
@@ -65,7 +73,7 @@ def run_agent(user_input: str) -> str:
         user_profile=user_profile if user_profile else "(no user info yet)",
         long_term_memory=long_term_memory if long_term_memory else "(no memories yet)",
     )
-    messages = list(_conversation)
+    messages = list(conversation)
     tools = registry.get_tools()
 
     while True:
@@ -91,8 +99,8 @@ def run_agent(user_input: str) -> str:
             # end_turn — extract text and return
             text_parts = [b.text for b in response.content if hasattr(b, "text")]
             reply = "\n".join(text_parts)
-            _conversation.append({"role": "assistant", "content": reply})
-            _save_conversation()
+            conversation.append({"role": "assistant", "content": reply})
+            _save_conversation(session_id)
             get_langfuse().update_current_span(output=reply)
             return reply
 
