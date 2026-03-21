@@ -16,8 +16,16 @@ Skills are self-registering. Adding a new capability is just writing a decorated
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY="your-key"
+cp .env.example .env   # fill in your keys
 ```
+
+All config lives in `.env` (gitignored). See `.env.example` for the full list of variables.
+
+### Observability (Langfuse)
+
+All LLM calls and tool executions are traced via [Langfuse](https://langfuse.com). Add your Langfuse keys to `.env` to enable it. Each user request creates a trace containing nested spans for every Claude API call (with token usage) and tool execution.
+
+If the Langfuse variables are not set, tracing is a no-op — the agent runs normally.
 
 ## Usage
 
@@ -60,6 +68,7 @@ The agentic loop picks it up automatically.
 ## Roadmap
 
 - [x] CLI + shell skill + Markdown memory
+- [x] Langfuse observability
 - [ ] Telegram bot interface
 - [ ] Scheduled tasks / daily briefing
 - [ ] Web search skill

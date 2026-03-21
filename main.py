@@ -1,6 +1,9 @@
 """CLI entry point for inkagent."""
 
-from agent.brain import run_agent
+from dotenv import load_dotenv
+load_dotenv()
+
+from agent.brain import run_agent  # noqa: E402
 
 
 def main() -> None:
