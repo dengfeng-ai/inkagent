@@ -3,16 +3,16 @@
 import json
 import logging
 
+from agent.config import (
+    CHARS_PER_TOKEN,
+    COMPRESS_THRESHOLD,
+    KEEP_RECENT_MESSAGES,
+    MAX_CONTEXT_TOKENS,
+)
 from agent.prompts import SUMMARY_PROMPT
 from agent.providers import get_provider, get_small_model, LLMError
 
 logger = logging.getLogger(__name__)
-
-# Context window management.
-MAX_CONTEXT_TOKENS = 200_000
-COMPRESS_THRESHOLD = 160_000  # trigger compression at 80% capacity
-CHARS_PER_TOKEN = 4  # rough estimate
-KEEP_RECENT_MESSAGES = 6  # preserve last 3 turns (user+assistant pairs)
 
 
 def estimate_tokens(system: str, messages: list[dict], tools: list[dict]) -> int:

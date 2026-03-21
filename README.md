@@ -86,6 +86,7 @@ inkagent/
 ├── bot.py               # Telegram bot entry point
 ├── agent/
 │   ├── brain.py         # Agentic loop (provider-agnostic)
+│   ├── config.py        # Shared constants (limits, timeouts)
 │   ├── memory.py        # Markdown memory (read/write)
 │   ├── registry.py      # Skill registration
 │   ├── prompts.py       # Prompt templates

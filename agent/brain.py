@@ -4,6 +4,7 @@ import logging
 import os
 
 from agent import registry, memory
+from agent.config import MAX_REPLY_TOKENS
 from agent.prompts import SYSTEM_PROMPT
 from agent.session import get_conversation, save_conversation
 from agent.compression import maybe_compress
@@ -114,14 +115,14 @@ def _call_llm(system: str, messages: list, tools: list, model: str):
     lf.update_current_generation(
         model=model,
         input={"system": system, "messages": messages, "tools": tools},
-        model_parameters={"max_tokens": 4096},
+        model_parameters={"max_tokens": MAX_REPLY_TOKENS},
     )
     response = provider.complete(
         model=model,
         system=system,
         messages=messages,
         tools=tools,
-        max_tokens=4096,
+        max_tokens=MAX_REPLY_TOKENS,
     )
     lf.update_current_generation(
         output=response.text,

@@ -6,6 +6,8 @@ brain.py reads registered tools without knowing individual skills.
 
 from typing import Any, Callable
 
+from agent.config import TOOL_OUTPUT_CAP
+
 _skills: dict[str, dict[str, Any]] = {}
 
 
@@ -42,8 +44,8 @@ def call_tool(name: str, args: dict[str, Any]) -> str:
         return f"Error: unknown tool '{name}'"
     try:
         result = _skills[name]["func"](**args)
-        if len(result) > 3000:
-            result = result[:3000] + "\n... (output truncated)"
+        if len(result) > TOOL_OUTPUT_CAP:
+            result = result[:TOOL_OUTPUT_CAP] + "\n... (output truncated)"
         return result
     except Exception as e:
         return f"Error running {name}: {e}"

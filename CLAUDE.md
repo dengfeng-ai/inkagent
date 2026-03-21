@@ -11,6 +11,7 @@ inkagent/
 ├── bot.py               # Telegram bot entry point
 ├── agent/
 │   ├── brain.py         # LLM agentic loop (tool_use) — provider-agnostic
+│   ├── config.py        # Shared constants (token limits, timeouts, caps)
 │   ├── memory.py        # Markdown-based memory (read/write)
 │   ├── registry.py      # Skill registration system
 │   ├── prompts.py       # Prompt templates (system, promotion, summary)
@@ -131,8 +132,8 @@ IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — alway
 ## Code Style
 
 - Type hints on all function signatures
-- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, and `providers/__init__.py`
-- Cap tool output at 3000 chars before returning to avoid context explosion
+- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
+- Cap tool output at `TOOL_OUTPUT_CAP` chars (see `agent/config.py`) before returning to avoid context explosion
 - IMPORTANT: Never import skills directly in `brain.py` — always go through `registry`
 - IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — always go through `providers`
 

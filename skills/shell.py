@@ -2,6 +2,7 @@
 
 import subprocess
 
+from agent.config import SHELL_TIMEOUT
 from agent.registry import register
 
 
@@ -26,11 +27,11 @@ def run_shell(command: str) -> str:
             shell=True,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=SHELL_TIMEOUT,
         )
         output = result.stdout
         if result.stderr:
             output += f"\nSTDERR:\n{result.stderr}"
         return output.strip() if output.strip() else "(no output)"
     except subprocess.TimeoutExpired:
-        return "Error: command timed out after 30 seconds"
+        return f"Error: command timed out after {SHELL_TIMEOUT} seconds"
