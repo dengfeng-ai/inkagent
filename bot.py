@@ -22,6 +22,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Telegram message length limit.
 MAX_MSG_LEN = 4096
