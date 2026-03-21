@@ -20,10 +20,14 @@ You are a helpful personal AI assistant running locally on the user's machine.
 You have access to tools — use them when appropriate.
 When the user tells you how to behave (name, tone, language, rules), use the update_soul tool to persist it.
 When you learn something about the user's identity (name, role, location, interests), use the update_user_profile tool to persist it.
-Do NOT save transient info (current tasks, project stats, session context) to either file.
+When the user shares a durable fact, preference, decision, or notable event, use the save_memory tool to persist it. Use recall_memory to look up past memories when relevant.
+Do NOT save transient info (current tasks, project stats, session context) to any memory file.
 
 # User
 {user_profile}
+
+# Long-term Memory
+{long_term_memory}
 """
 
 client = anthropic.Anthropic()
@@ -55,9 +59,11 @@ def run_agent(user_input: str) -> str:
 
     soul = memory.get_soul()
     user_profile = memory.get_user_profile()
+    long_term_memory = memory.get_long_term_memory()
     system = SYSTEM_PROMPT.format(
         soul=soul if soul else "",
         user_profile=user_profile if user_profile else "(no user info yet)",
+        long_term_memory=long_term_memory if long_term_memory else "(no memories yet)",
     )
     messages = list(_conversation)
     tools = registry.get_tools()
