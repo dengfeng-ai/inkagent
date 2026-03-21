@@ -16,24 +16,13 @@ Inspired by [OpenClaw](https://github.com/nichochar/open-claw). Built in Python.
 
 ## Quick Start
 
-Requires **Python 3.11+** and an API key from [Anthropic](https://console.anthropic.com/) or [OpenAI](https://platform.openai.com/).
-
 ```bash
-git clone https://github.com/yourname/inkagent.git
+git clone https://github.com/dengfeng-ai/inkagent
 cd inkagent
-
-# Option A: setup script (creates venv, installs deps, generates .env)
-./setup.sh          # macOS / Linux
-setup.bat           # Windows
-
-# Option B: manual
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and fill in your provider config:
+Edit `.env` and fill in your API key:
 
 ```bash
 # Anthropic (default)
@@ -44,13 +33,51 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
 # LLM_PROVIDER=openai
 ```
 
-Run:
+### Option A: Docker (recommended)
+
+Docker 更安全 — `run_shell` 等工具在容器内执行，不会影响宿主机。
+
+```bash
+docker build -t inkagent .
+
+# CLI mode (default)
+docker run -it --env-file .env inkagent
+
+# Telegram bot mode
+docker run --env-file .env inkagent python bot.py
+```
+
+持久化 `memory/` 和 `conversations/`，避免容器重启后数据丢失：
+
+```bash
+docker run -it --env-file .env \
+  -v $(pwd)/memory:/app/memory \
+  -v $(pwd)/conversations:/app/conversations \
+  inkagent
+```
+
+### Option B: Local
+
+Requires **Python 3.11+**.
+
+```bash
+# setup script (creates venv, installs deps)
+./setup.sh          # macOS / Linux
+setup.bat           # Windows
+
+# — or manual —
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
 ```bash
 source .venv/bin/activate
 python main.py          # CLI mode
 python bot.py           # Telegram bot (requires TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_ID in .env)
 ```
+
+Note: 本地运行时 `run_shell` 直接在你的机器上执行命令，请注意安全。
 
 ## How It Works
 
@@ -149,15 +176,6 @@ from skills import my_skill  # noqa: F401
 ```
 
 Done. The agent picks it up automatically.
-
-## Docker (optional)
-
-```bash
-docker build -t inkagent .
-docker run --env-file .env -v ./memory:/app/memory inkagent
-```
-
-Note: `run_shell` executes inside the container, not on your host machine.
 
 ## Configuration
 

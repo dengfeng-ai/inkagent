@@ -9,5 +9,5 @@ COPY . .
 
 RUN mkdir -p memory/daily conversations
 
-# Default to Telegram bot; override with: docker run ... inkagent python main.py
-CMD ["python", "bot.py"]
+# Default to CLI mode
+CMD ["python", "main.py"]
