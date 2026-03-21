@@ -1,75 +1,101 @@
 # inkagent
 
-A lightweight personal AI agent that runs locally, powered by Claude and driven by Markdown memory.
+A lightweight personal AI agent that runs locally on your machine. Powered by Claude, driven by Markdown memory.
 
 Inspired by [OpenClaw](https://github.com/nichochar/open-claw). Built in Python.
 
-## How it works
+## Features
 
-inkagent runs an agentic tool-use loop: it sends your message to Claude, executes any tools Claude requests (shell commands, memory updates, etc.), feeds the results back, and repeats until Claude produces a final response. All memory is stored as plain Markdown files — no database required.
+- **Agentic tool-use loop** — sends your message to Claude, executes tools, feeds results back, repeats until done
+- **Markdown memory** — persona, user profile, long-term memory, daily logs — all plain `.md` files you can read and edit
+- **Auto memory promotion** — daily logs are curated into long-term memory overnight via Haiku
+- **Self-registering skills** — add capabilities by dropping in a decorated Python function
+- **Two interfaces** — CLI (`main.py`) or Telegram bot (`bot.py`)
+- **Observability** — optional [Langfuse](https://langfuse.com) tracing for all LLM calls and tool executions
 
-Skills are self-registering. Adding a new capability is just writing a decorated Python function — the core loop never needs to change.
+## Quick Start
 
-## Setup
-
-Requires **Python 3.11+**.
+Requires **Python 3.11+** and an [Anthropic API key](https://console.anthropic.com/).
 
 ```bash
-python -m venv .venv
+git clone https://github.com/yourname/inkagent.git
+cd inkagent
+
+# Option A: setup script (creates venv, installs deps, generates .env)
+./setup.sh          # macOS / Linux
+setup.bat           # Windows
+
+# Option B: manual
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # fill in your keys
+cp .env.example .env
 ```
 
-For development (includes pytest):
+Edit `.env` and fill in your API key:
 
 ```bash
-pip install -r requirements-dev.txt
+ANTHROPIC_API_KEY=sk-ant-xxxxx
 ```
 
-All config lives in `.env` (gitignored). See `.env.example` for the full list of variables.
-
-### Observability (Langfuse)
-
-All LLM calls and tool executions are traced via [Langfuse](https://langfuse.com). Add your Langfuse keys to `.env` to enable it. Each user request creates a trace containing nested spans for every Claude API call (with token usage) and tool execution.
-
-If the Langfuse variables are not set, tracing is a no-op — the agent runs normally.
-
-## Usage
+Run:
 
 ```bash
-python main.py
+source .venv/bin/activate
+python main.py          # CLI mode
+python bot.py           # Telegram bot (requires TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_ID in .env)
 ```
+
+## How It Works
+
+```
+you> remember that I prefer dark mode
+
+agent> [calls update_user_profile] → saves to memory/USER.md
+agent> [calls log_daily] → appends to memory/daily/2025-03-21.md
+agent> Got it, noted your preference for dark mode.
+
+# Next day, the promotion system reviews yesterday's log
+# and decides if anything is worth keeping in MEMORY.md
+```
+
+## Memory System
+
+All memory lives in `memory/` as plain Markdown:
+
+| File | Purpose | Updated by |
+|------|---------|------------|
+| `SOUL.md` | Agent persona — name, tone, language, behavior rules | `update_soul` tool |
+| `USER.md` | User profile — name, role, interests | `update_user_profile` tool |
+| `MEMORY.md` | Long-term memory — curated facts and decisions | Automatic promotion |
+| `daily/YYYY-MM-DD.md` | Daily log — ephemeral notes, one file per day | `log_daily` tool |
+
+The agent sees `SOUL.md`, `USER.md`, `MEMORY.md`, and the last two days of daily logs in every conversation.
 
 ## Architecture
 
 ```
 inkagent/
 ├── main.py              # CLI entry point
+├── bot.py               # Telegram bot entry point
 ├── agent/
-│   ├── brain.py         # LLM agentic loop (tool_use)
-│   ├── memory.py        # Markdown-based memory (read/write)
-│   └── registry.py      # Skill registration system
+│   ├── brain.py         # Agentic loop (tool_use)
+│   ├── memory.py        # Markdown memory (read/write)
+│   └── registry.py      # Skill registration
 ├── skills/
-│   ├── __init__.py      # Auto-imports all skills
-│   └── shell.py         # run_shell skill
-└── memory/
-    ├── SOUL.md          # Agent persona (name, tone, behavior rules)
-    ├── USER.md          # User personal info (name, role, interests)
-    ├── MEMORY.md        # Long-term memory (auto-promoted from daily logs)
-    └── daily/           # Daily logs (ephemeral, append-only)
-        └── YYYY-MM-DD.md
+│   ├── shell.py         # run_shell
+│   ├── profile.py       # update_soul, update_user_profile
+│   └── memory_skill.py  # log_daily, recall_memory
+└── memory/              # All memory (gitignored)
+    ├── SOUL.md
+    ├── USER.md
+    ├── MEMORY.md
+    └── daily/
 ```
 
-## Adding a skill
+Key design: `brain.py` has zero knowledge of individual skills. Skills register via `@registry.register(...)` — adding one never touches core code.
 
-1. Create `skills/your_skill.py`
-2. Decorate your function with `@registry.register(name, description, input_schema)`
-3. Import it in `skills/__init__.py`
-
-The agentic loop picks it up automatically.
-
-## Built-in skills
+## Built-in Skills
 
 | Skill | Description |
 |-------|-------------|
@@ -78,6 +104,58 @@ The agentic loop picks it up automatically.
 | `update_user_profile` | Update user info — name, role, location, interests |
 | `log_daily` | Jot a note in today's daily log; important entries auto-promote to long-term memory |
 | `recall_memory` | Keyword search across MEMORY.md and daily logs |
+
+## Adding a Skill
+
+Create `skills/my_skill.py`:
+
+```python
+from agent.registry import register
+
+@register(
+    name="my_skill",
+    description="What this skill does",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "param": {"type": "string", "description": "..."},
+        },
+        "required": ["param"],
+    },
+)
+def my_skill(param: str) -> str:
+    return "result"
+```
+
+Add to `skills/__init__.py`:
+
+```python
+from skills import my_skill  # noqa: F401
+```
+
+Done. The agent picks it up automatically.
+
+## Docker (optional)
+
+```bash
+docker build -t inkagent .
+docker run --env-file .env -v ./memory:/app/memory inkagent
+```
+
+Note: `run_shell` executes inside the container, not on your host machine.
+
+## Configuration
+
+All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for the full list:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ANTHROPIC_API_KEY` | Yes | Claude API key |
+| `TELEGRAM_BOT_TOKEN` | For bot | Telegram bot token from @BotFather |
+| `TELEGRAM_OWNER_ID` | For bot | Your numeric Telegram user ID |
+| `LANGFUSE_PUBLIC_KEY` | No | Langfuse observability |
+| `LANGFUSE_SECRET_KEY` | No | Langfuse observability |
+| `LANGFUSE_HOST` | No | Langfuse host URL |
 
 ## Roadmap
 
@@ -88,3 +166,7 @@ The agentic loop picks it up automatically.
 - [ ] Scheduled tasks / daily briefing
 - [ ] Web search skill
 - [ ] Gmail / Google Calendar skills
+
+## License
+
+MIT

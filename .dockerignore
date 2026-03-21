@@ -1,6 +1,7 @@
+.venv/
+.env
 memory/
 conversations/
 __pycache__/
 *.pyc
-.env
-.venv/
+.git/
