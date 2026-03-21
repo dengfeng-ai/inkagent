@@ -44,11 +44,15 @@ class OpenAIProvider(LLMProvider):
         tool_calls: list[ToolCall] = []
         if message.tool_calls:
             for tc in message.tool_calls:
+                try:
+                    args = json.loads(tc.function.arguments)
+                except (json.JSONDecodeError, TypeError):
+                    args = {}
                 tool_calls.append(
                     ToolCall(
                         id=tc.id,
                         name=tc.function.name,
-                        input=json.loads(tc.function.arguments),
+                        input=args,
                     )
                 )
 
@@ -63,7 +67,7 @@ class OpenAIProvider(LLMProvider):
         )
 
         return LLMResponse(
-            text=message.content,
+            text=message.content if message.content else None,
             tool_calls=tool_calls,
             stop_reason=stop_reason,
             usage=usage,
@@ -85,7 +89,8 @@ class OpenAIProvider(LLMProvider):
             )
         except APIError as e:
             raise LLMError(str(e), original=e) from e
-        return raw.choices[0].message.content.strip()
+        content = raw.choices[0].message.content
+        return content.strip() if content else ""
 
     def format_tools(self, tools: list[dict]) -> list:
         """Convert Anthropic-style tool defs to OpenAI function-calling format."""

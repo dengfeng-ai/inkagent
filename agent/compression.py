@@ -83,6 +83,9 @@ def maybe_compress(conversation: list[dict], system: str, tools: list[dict]) -> 
     if split_idx > 0 and conversation[split_idx].get("role") != "user":
         split_idx -= 1
 
+    if split_idx <= 0:
+        return
+
     old_messages = conversation[:split_idx]
     kept_messages = conversation[split_idx:]
 

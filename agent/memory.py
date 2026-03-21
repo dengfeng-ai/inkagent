@@ -10,7 +10,7 @@ Files:
 import logging
 import os
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ def append_daily_log(content: str) -> str:
     today = date.today()
     path = _daily_log_path(today)
 
-    timestamp = __import__("datetime").datetime.now().strftime("%H:%M")
+    timestamp = datetime.now().strftime("%H:%M")
     entry = f"- [{timestamp}] {content}\n"
 
     try:
