@@ -17,7 +17,10 @@ inkagent/
 │   └── shell.py         # run_shell skill
 └── memory/
     ├── SOUL.md          # Agent persona (name, tone, behavior rules)
-    └── USER.md          # User personal info (name, role, interests)
+    ├── USER.md          # User personal info (name, role, interests)
+    ├── MEMORY.md        # Long-term memory (curated, durable)
+    └── daily/           # Daily logs (ephemeral, append-only)
+        └── YYYY-MM-DD.md
 ```
 
 Key design principle: `brain.py` has zero knowledge of individual skills.
@@ -46,12 +49,14 @@ cat memory/USER.md
 
 ## Memory System
 
-Two Markdown files in `memory/`:
+Three-tier Markdown memory in `memory/`:
 
 - **`SOUL.md`** — Agent persona. Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (name, tone, language, style).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
+- **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Updated via `save_memory` tool for durable facts, preferences, decisions, events.
+- **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). `recall_memory` searches across both MEMORY.md and daily logs.
 
-Conversation history is kept in-memory for the current session (not persisted to disk).
+Conversation history is kept in-memory for the current session, auto-saved to `conversations/` as JSON.
 The `memory/` directory is gitignored — never commit it.
 
 ## Skill System
@@ -71,11 +76,14 @@ Built-in skills:
 - `run_shell` — executes shell commands, 30s timeout, output capped at 3000 chars
 - `update_soul` — rewrites `memory/SOUL.md` with agent persona settings
 - `update_user_profile` — rewrites `memory/USER.md` with user personal info
+- `save_memory` — appends durable entry to `memory/MEMORY.md`
+- `recall_memory` — keyword search across MEMORY.md and daily logs
+- `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`)
 
 ## Agentic Loop
 
 `brain.py` runs a standard tool_use loop:
-1. Build system prompt (instructions + SOUL.md + USER.md) + conversation messages
+1. Build system prompt (instructions + SOUL.md + USER.md + MEMORY.md + daily logs) + conversation messages
 2. Call Claude API with all registered tools
 3. If `stop_reason == "tool_use"`: execute tools, append results, loop
 4. If `stop_reason == "end_turn"`: extract text, append to in-memory conversation, return

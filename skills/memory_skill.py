@@ -1,8 +1,9 @@
-"""Long-term memory skills — save and recall durable memories."""
+"""Memory skills — long-term memory and daily logs."""
 
 from agent.registry import register
 from agent.memory import save_memory as _save_memory
 from agent.memory import recall_memory as _recall_memory
+from agent.memory import append_daily_log as _append_daily_log
 
 
 @register(
@@ -44,3 +45,21 @@ def save_memory(content: str, category: str) -> str:
 )
 def recall_memory(query: str) -> str:
     return _recall_memory(query)
+
+
+@register(
+    name="log_daily",
+    description="Jot down a note in today's daily log. Use this for noteworthy things during conversation — decisions made, problems solved, topics discussed, action items. These are short-lived notes (kept for a few days), NOT long-term memory. For durable facts/preferences, use save_memory instead.",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "content": {
+                "type": "string",
+                "description": "The note to log (one line, concise)",
+            },
+        },
+        "required": ["content"],
+    },
+)
+def log_daily(content: str) -> str:
+    return _append_daily_log(content)
