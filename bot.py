@@ -5,6 +5,7 @@ import logging
 import os
 
 from telegram import Update
+from telegram.constants import ChatAction
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -58,8 +59,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     session_id = f"tg_{update.effective_chat.id}"
 
-    # Run the synchronous agent in a thread to avoid blocking the event loop.
-    reply = await asyncio.to_thread(run_agent, user_text, session_id)
+    async def keep_typing() -> None:
+        """Send typing action every 4s until cancelled."""
+        while True:
+            await update.effective_chat.send_action(ChatAction.TYPING)
+            await asyncio.sleep(4)
+
+    typing_task = asyncio.create_task(keep_typing())
+    try:
+        reply = await asyncio.to_thread(run_agent, user_text, session_id)
+    finally:
+        typing_task.cancel()
+
     await _send_long_message(update, reply)
 
 
