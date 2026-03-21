@@ -1,5 +1,9 @@
 """LLM agentic loop using Claude tool_use."""
 
+import json
+from datetime import datetime
+from pathlib import Path
+
 import anthropic
 from langfuse import observe, get_client as get_langfuse
 
@@ -7,6 +11,8 @@ from agent import registry, memory
 
 # Import skills so they self-register — never import skills directly here.
 import skills  # noqa: F401
+
+CONVERSATIONS_DIR = Path(__file__).resolve().parent.parent / "conversations"
 
 SYSTEM_PROMPT = """\
 You are a helpful personal AI assistant running locally on the user's machine.
@@ -25,6 +31,19 @@ MODEL = "claude-sonnet-4-20250514"
 
 # In-memory conversation history for the current session.
 _conversation: list[dict] = []
+
+# Session file path — created on first message.
+_session_file: Path | None = None
+
+
+def _save_conversation() -> None:
+    """Save conversation to the session JSON file."""
+    global _session_file
+    if not _session_file:
+        CONVERSATIONS_DIR.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        _session_file = CONVERSATIONS_DIR / f"{timestamp}.json"
+    _session_file.write_text(json.dumps(_conversation, ensure_ascii=False, indent=2))
 
 
 @observe()
@@ -67,6 +86,7 @@ def run_agent(user_input: str) -> str:
             text_parts = [b.text for b in response.content if hasattr(b, "text")]
             reply = "\n".join(text_parts)
             _conversation.append({"role": "assistant", "content": reply})
+            _save_conversation()
             get_langfuse().update_current_span(output=reply)
             return reply
 
