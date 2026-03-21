@@ -9,13 +9,15 @@ from agent import registry, memory
 import skills  # noqa: F401
 
 SYSTEM_PROMPT = """\
-You are inkagent, a helpful personal AI assistant running locally on the user's machine.
+You are a helpful personal AI assistant running locally on the user's machine.
+{soul}
 You have access to tools — use them when appropriate.
-When you learn something new about the user, use the update_profile tool to persist it.
-Be concise and direct.
+When the user tells you how to behave (name, tone, language, rules), use the update_soul tool to persist it.
+When you learn something about the user's identity (name, role, location, interests), use the update_user_profile tool to persist it.
+Do NOT save transient info (current tasks, project stats, session context) to either file.
 
-# Memory
-{memory_context}
+# User
+{user_profile}
 """
 
 client = anthropic.Anthropic()
@@ -32,7 +34,12 @@ def run_agent(user_input: str) -> str:
 
     _conversation.append({"role": "user", "content": user_input})
 
-    system = SYSTEM_PROMPT.format(memory_context=memory.build_context())
+    soul = memory.get_soul()
+    user_profile = memory.get_user_profile()
+    system = SYSTEM_PROMPT.format(
+        soul=soul if soul else "",
+        user_profile=user_profile if user_profile else "(no user info yet)",
+    )
     messages = list(_conversation)
     tools = registry.get_tools()
 

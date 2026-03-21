@@ -16,8 +16,8 @@ inkagent/
 │   ├── __init__.py      # Auto-imports all skills
 │   └── shell.py         # run_shell skill
 └── memory/
-    ├── profile.md       # Persistent user profile (LLM-maintained)
-    └── history.md       # Rolling conversation history (last 20 turns)
+    ├── SOUL.md          # Agent persona (name, tone, behavior rules)
+    └── USER.md          # User personal info (name, role, interests)
 ```
 
 Key design principle: `brain.py` has zero knowledge of individual skills.
@@ -37,21 +37,21 @@ Skills register themselves via `@registry.register(...)` — adding a skill neve
 python main.py
 
 # Install dependencies
-pip install anthropic
+pip install -r requirements.txt
 
 # View memory
-cat memory/profile.md
-cat memory/history.md
+cat memory/SOUL.md
+cat memory/USER.md
 ```
 
 ## Memory System
 
 Two Markdown files in `memory/`:
 
-- **`profile.md`** — User profile. Updated by the LLM via `update_profile` tool when it learns something new. Never truncated.
-- **`history.md`** — Conversation history. Append-only per turn, trimmed to last `HISTORY_LIMIT` (default: 20) turns by `_trim_history()`.
+- **`SOUL.md`** — Agent persona. Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (name, tone, language, style).
+- **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
 
-Both files are injected into the system prompt on every turn via `memory.build_context()`.
+Conversation history is kept in-memory for the current session (not persisted to disk).
 The `memory/` directory is gitignored — never commit it.
 
 ## Skill System
@@ -69,15 +69,16 @@ That's it. `brain.py` picks it up automatically.
 
 Built-in skills:
 - `run_shell` — executes shell commands, 30s timeout, output capped at 3000 chars
-- `update_profile` — rewrites `memory/profile.md` with new user info
+- `update_soul` — rewrites `memory/SOUL.md` with agent persona settings
+- `update_user_profile` — rewrites `memory/USER.md` with user personal info
 
 ## Agentic Loop
 
 `brain.py` runs a standard tool_use loop:
-1. Build messages: system prompt (fixed instructions + memory context) + user message
+1. Build system prompt (instructions + SOUL.md + USER.md) + conversation messages
 2. Call Claude API with all registered tools
 3. If `stop_reason == "tool_use"`: execute tools, append results, loop
-4. If `stop_reason == "end_turn"`: extract text, save turn to history, return
+4. If `stop_reason == "end_turn"`: extract text, append to in-memory conversation, return
 
 No recursion limit is set — rely on Claude's natural termination behavior.
 

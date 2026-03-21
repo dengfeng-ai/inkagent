@@ -1,13 +1,15 @@
 """Markdown-based memory system.
 
-Single file:
-- profile.md  — persistent user profile, updated by LLM
+Two files:
+- SOUL.md  — agent persona (identity, tone, behavior rules)
+- USER.md  — user personal info (name, role, preferences)
 """
 
 import os
 
 MEMORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "memory")
-PROFILE_PATH = os.path.join(MEMORY_DIR, "profile.md")
+SOUL_PATH = os.path.join(MEMORY_DIR, "SOUL.md")
+USER_PATH = os.path.join(MEMORY_DIR, "USER.md")
 
 
 def _ensure_dir() -> None:
@@ -27,17 +29,23 @@ def _write_file(path: str, content: str) -> None:
         f.write(content)
 
 
-def build_context() -> str:
-    """Build the memory context string injected into the system prompt."""
-    profile = _read_file(PROFILE_PATH)
-
-    if profile.strip():
-        return f"## User Profile\n{profile.strip()}"
-
-    return "(no memory yet)"
+def get_soul() -> str:
+    """Return the agent persona content for the system prompt instruction area."""
+    return _read_file(SOUL_PATH).strip()
 
 
-def update_profile(content: str) -> str:
-    """Overwrite profile.md with new content. Called by the update_profile skill."""
-    _write_file(PROFILE_PATH, content)
-    return "Profile updated."
+def get_user_profile() -> str:
+    """Return the user profile content for the system prompt context area."""
+    return _read_file(USER_PATH).strip()
+
+
+def update_soul(content: str) -> str:
+    """Overwrite SOUL.md with new persona content."""
+    _write_file(SOUL_PATH, content)
+    return "Persona updated."
+
+
+def update_user_profile(content: str) -> str:
+    """Overwrite USER.md with new user info."""
+    _write_file(USER_PATH, content)
+    return "User profile updated."

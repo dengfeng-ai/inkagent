@@ -46,8 +46,8 @@ inkagent/
 │   ├── __init__.py      # Auto-imports all skills
 │   └── shell.py         # run_shell skill
 └── memory/
-    ├── profile.md       # Persistent user profile (LLM-maintained)
-    └── history.md       # Rolling conversation history (last 20 turns)
+    ├── SOUL.md          # Agent persona (name, tone, behavior rules)
+    └── USER.md          # User personal info (name, role, interests)
 ```
 
 ## Adding a skill
@@ -63,7 +63,8 @@ The agentic loop picks it up automatically.
 | Skill | Description |
 |-------|-------------|
 | `run_shell` | Execute shell commands (30s timeout, output capped at 3k chars) |
-| `update_profile` | Rewrite the user profile in memory |
+| `update_soul` | Update agent persona — name, tone, language, behavior rules |
+| `update_user_profile` | Update user info — name, role, location, interests |
 
 ## Roadmap
 
