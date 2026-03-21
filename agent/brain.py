@@ -1,8 +1,7 @@
 """LLM agentic loop using pluggable provider."""
 
 import logging
-
-from langfuse import observe, get_client as get_langfuse
+import os
 
 from agent import registry, memory
 from agent.prompts import SYSTEM_PROMPT
@@ -13,14 +12,37 @@ from agent.providers import get_provider, get_model, LLMError
 
 logger = logging.getLogger(__name__)
 
+# Langfuse is optional — only enable when credentials are configured.
+_langfuse_enabled = bool(os.environ.get("LANGFUSE_PUBLIC_KEY"))
+
+if _langfuse_enabled:
+    from langfuse import observe as _observe, get_client as _get_langfuse
+else:
+    # No-op replacements when Langfuse is not configured.
+    def _observe(**kwargs):
+        """No-op decorator."""
+        def decorator(fn):
+            return fn
+        return decorator
+
+    class _NullLangfuse:
+        """Stub that silently ignores all method calls."""
+        def __getattr__(self, _name):
+            return lambda *a, **kw: None
+
+    _null_lf = _NullLangfuse()
+
+    def _get_langfuse():
+        return _null_lf
+
 # Import skills so they self-register — never import skills directly here.
 import skills  # noqa: F401
 
 
-@observe()
+@_observe()
 def run_agent(user_input: str, session_id: str = "cli") -> str:
     """Run one full agentic turn: send message, loop on tool calls, return final text."""
-    get_langfuse().update_current_span(input=user_input)
+    _get_langfuse().update_current_span(input=user_input)
 
     maybe_promote()
 
@@ -75,7 +97,7 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
                 reply = "\n".join(parts).strip()
                 conversation.append({"role": "assistant", "content": reply})
                 save_conversation(session_id)
-                get_langfuse().update_current_span(output=reply)
+                _get_langfuse().update_current_span(output=reply)
                 return reply
     except LLMError as e:
         logger.error("API call failed: %s", e)
@@ -84,11 +106,11 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
         raise
 
 
-@observe(as_type="generation")
+@_observe(as_type="generation")
 def _call_llm(system: str, messages: list, tools: list, model: str):
     """Call LLM via provider — tracked as a generation span in Langfuse."""
     provider = get_provider()
-    lf = get_langfuse()
+    lf = _get_langfuse()
     lf.update_current_generation(
         model=model,
         input={"system": system, "messages": messages, "tools": tools},
@@ -111,10 +133,10 @@ def _call_llm(system: str, messages: list, tools: list, model: str):
     return response
 
 
-@observe(as_type="tool")
+@_observe(as_type="tool")
 def _execute_tool(name: str, tool_input: dict) -> str:
     """Execute a tool — tracked as a tool span in Langfuse."""
-    lf = get_langfuse()
+    lf = _get_langfuse()
     lf.update_current_span(input={"tool": name, **tool_input})
     result = registry.call_tool(name, tool_input)
     lf.update_current_span(output=result)
