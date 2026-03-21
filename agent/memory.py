@@ -28,16 +28,23 @@ def _ensure_dir() -> None:
 
 
 def _read_file(path: str) -> str:
-    if os.path.exists(path):
-        with open(path, "r") as f:
-            return f.read()
+    try:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                return f.read()
+    except OSError as e:
+        logger.error("Failed to read %s: %s", path, e)
     return ""
 
 
 def _write_file(path: str, content: str) -> None:
-    _ensure_dir()
-    with open(path, "w") as f:
-        f.write(content)
+    try:
+        _ensure_dir()
+        with open(path, "w") as f:
+            f.write(content)
+    except OSError as e:
+        logger.error("Failed to write %s: %s", path, e)
+        raise
 
 
 def get_soul() -> str:
@@ -66,15 +73,6 @@ def get_long_term_memory() -> str:
     """Return full MEMORY.md content for system prompt injection."""
     return _read_file(LONG_TERM_PATH).strip()
 
-
-def save_memory(content: str, category: str) -> str:
-    """Append a memory entry to MEMORY.md."""
-    _ensure_dir()
-    today = date.today().isoformat()
-    entry = f"\n## {today} | {category}\n{content}\n"
-    with open(LONG_TERM_PATH, "a") as f:
-        f.write(entry)
-    return "Memory saved."
 
 
 def recall_memory(query: str) -> str:
@@ -136,8 +134,12 @@ def append_daily_log(content: str) -> str:
     timestamp = __import__("datetime").datetime.now().strftime("%H:%M")
     entry = f"- [{timestamp}] {content}\n"
 
-    with open(path, "a") as f:
-        f.write(entry)
+    try:
+        with open(path, "a") as f:
+            f.write(entry)
+    except OSError as e:
+        logger.error("Failed to append daily log: %s", e)
+        return f"Error writing daily log: {e}"
     return "Daily log updated."
 
 
@@ -166,15 +168,19 @@ def apply_promotion(entries: str) -> str:
     yesterday = date.today() - timedelta(days=1)
     path = _daily_log_path(yesterday)
 
-    # Append to MEMORY.md if there's anything to promote
-    if entries.strip():
-        _ensure_dir()
-        with open(LONG_TERM_PATH, "a") as f:
-            f.write(f"\n{entries.strip()}\n")
-        logger.info("Promoted entries from %s to MEMORY.md", yesterday.isoformat())
+    try:
+        # Append to MEMORY.md if there's anything to promote
+        if entries.strip():
+            _ensure_dir()
+            with open(LONG_TERM_PATH, "a") as f:
+                f.write(f"\n{entries.strip()}\n")
+            logger.info("Promoted entries from %s to MEMORY.md", yesterday.isoformat())
 
-    # Mark daily log as promoted
-    with open(path, "a") as f:
-        f.write(f"\n{PROMOTED_MARKER}\n")
+        # Mark daily log as promoted
+        with open(path, "a") as f:
+            f.write(f"\n{PROMOTED_MARKER}\n")
+    except OSError as e:
+        logger.error("Failed during memory promotion: %s", e)
+        return f"promotion_error: {e}"
 
     return "promoted" if entries.strip() else "nothing_to_promote"

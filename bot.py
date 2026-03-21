@@ -14,6 +14,8 @@ from telegram.ext import (
     filters,
 )
 
+import anthropic
+
 from agent.brain import run_agent
 
 logging.basicConfig(
@@ -27,7 +29,10 @@ MAX_MSG_LEN = 4096
 
 
 def _get_owner_id() -> int:
-    return int(os.environ["TELEGRAM_OWNER_ID"])
+    raw = os.environ.get("TELEGRAM_OWNER_ID")
+    if not raw:
+        raise SystemExit("Error: TELEGRAM_OWNER_ID is not set. Check your .env file.")
+    return int(raw)
 
 
 def _is_owner(update: Update, owner_id: int) -> bool:
@@ -68,6 +73,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     typing_task = asyncio.create_task(keep_typing())
     try:
         reply = await asyncio.to_thread(run_agent, user_text, session_id)
+    except anthropic.APIError as e:
+        logger.error("API call failed in session %s: %s", session_id, e)
+        reply = f"[API error: {e}]"
     finally:
         typing_task.cancel()
 
@@ -78,7 +86,11 @@ def main() -> None:
     from dotenv import load_dotenv
     load_dotenv()
 
-    bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        raise SystemExit("Error: TELEGRAM_BOT_TOKEN is not set. Check your .env file.")
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise SystemExit("Error: ANTHROPIC_API_KEY is not set. Check your .env file.")
     owner_id = _get_owner_id()
 
     app = ApplicationBuilder().token(bot_token).build()

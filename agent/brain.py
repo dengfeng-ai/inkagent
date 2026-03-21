@@ -118,12 +118,17 @@ def _summarize_messages(messages: list[dict]) -> str:
     prompt = SUMMARY_PROMPT.format(conversation=text)
 
     logger.info("Summarizing %d messages for context compression", len(messages))
-    response = client.messages.create(
-        model=PROMOTION_MODEL,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response.content[0].text.strip()
+    try:
+        response = client.messages.create(
+            model=PROMOTION_MODEL,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text.strip()
+    except anthropic.APIError as e:
+        logger.error("Summarization API call failed: %s", e)
+        # Fall back to a simple truncation instead of crashing
+        return f"[Summary unavailable — earlier conversation context was dropped]\n{text[:500]}"
 
 
 def _maybe_compress(conversation: list[dict], system: str, tools: list[dict]) -> None:
@@ -196,11 +201,15 @@ def _maybe_promote() -> None:
     prompt = PROMOTION_PROMPT.format(**ctx)
 
     logger.info("Running memory promotion for %s", ctx["date"])
-    response = client.messages.create(
-        model=PROMOTION_MODEL,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    try:
+        response = client.messages.create(
+            model=PROMOTION_MODEL,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except anthropic.APIError as e:
+        logger.error("Memory promotion API call failed: %s", e)
+        return  # skip promotion this time, will retry next session
 
     text = response.content[0].text.strip()
     if text == "NOTHING":
@@ -237,33 +246,40 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
 
     messages = list(conversation)
 
-    while True:
-        response = _call_llm(system, messages, tools)
+    try:
+        while True:
+            response = _call_llm(system, messages, tools)
 
-        if response.stop_reason == "tool_use":
-            # Collect all tool_use blocks and execute them
-            assistant_content = response.content
-            messages.append({"role": "assistant", "content": assistant_content})
+            if response.stop_reason == "tool_use":
+                # Collect all tool_use blocks and execute them
+                assistant_content = response.content
+                messages.append({"role": "assistant", "content": assistant_content})
 
-            tool_results = []
-            for block in assistant_content:
-                if block.type == "tool_use":
-                    result = _execute_tool(block.name, block.input)
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": result,
-                    })
+                tool_results = []
+                for block in assistant_content:
+                    if block.type == "tool_use":
+                        result = _execute_tool(block.name, block.input)
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": result,
+                        })
 
-            messages.append({"role": "user", "content": tool_results})
-        else:
-            # end_turn — extract text and return
-            text_parts = [b.text for b in response.content if hasattr(b, "text")]
-            reply = "\n".join(text_parts)
-            conversation.append({"role": "assistant", "content": reply})
-            _save_conversation(session_id)
-            get_langfuse().update_current_span(output=reply)
-            return reply
+                messages.append({"role": "user", "content": tool_results})
+            else:
+                # end_turn — extract text and return
+                text_parts = [b.text for b in response.content if hasattr(b, "text")]
+                reply = "\n".join(text_parts)
+                conversation.append({"role": "assistant", "content": reply})
+                _save_conversation(session_id)
+                get_langfuse().update_current_span(output=reply)
+                return reply
+    except anthropic.APIError as e:
+        logger.error("API call failed: %s", e)
+        # Remove the user message we just appended so conversation stays clean
+        if conversation and conversation[-1].get("role") == "user":
+            conversation.pop()
+        raise
 
 
 @observe(as_type="generation")

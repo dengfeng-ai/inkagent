@@ -12,11 +12,19 @@ Skills are self-registering. Adding a new capability is just writing a decorated
 
 ## Setup
 
+Requires **Python 3.11+**.
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # fill in your keys
+```
+
+For development (includes pytest):
+
+```bash
+pip install -r requirements-dev.txt
 ```
 
 All config lives in `.env` (gitignored). See `.env.example` for the full list of variables.
