@@ -53,8 +53,10 @@ Three-tier Markdown memory in `memory/`:
 
 - **`SOUL.md`** — Agent persona. Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (name, tone, language, style).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
-- **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Updated via `save_memory` tool for durable facts, preferences, decisions, events.
+- **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Populated exclusively by the automatic promotion system (no direct write tool).
 - **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). `recall_memory` searches across both MEMORY.md and daily logs.
+
+**Memory promotion**: On the first conversation turn each day, the system checks if yesterday's daily log exists and hasn't been promoted. If so, it sends the log + current MEMORY.md to Haiku, which decides what's worth keeping long-term. Promoted entries are appended to MEMORY.md; the daily log is marked `<!-- promoted -->` to prevent re-processing.
 
 Conversation history is kept in-memory for the current session, auto-saved to `conversations/` as JSON.
 The `memory/` directory is gitignored — never commit it.
@@ -76,9 +78,8 @@ Built-in skills:
 - `run_shell` — executes shell commands, 30s timeout, output capped at 3000 chars
 - `update_soul` — rewrites `memory/SOUL.md` with agent persona settings
 - `update_user_profile` — rewrites `memory/USER.md` with user personal info
-- `save_memory` — appends durable entry to `memory/MEMORY.md`
 - `recall_memory` — keyword search across MEMORY.md and daily logs
-- `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`)
+- `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`); important entries are auto-promoted to MEMORY.md overnight
 
 ## Agentic Loop
 

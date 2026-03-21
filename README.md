@@ -47,7 +47,10 @@ inkagent/
 │   └── shell.py         # run_shell skill
 └── memory/
     ├── SOUL.md          # Agent persona (name, tone, behavior rules)
-    └── USER.md          # User personal info (name, role, interests)
+    ├── USER.md          # User personal info (name, role, interests)
+    ├── MEMORY.md        # Long-term memory (auto-promoted from daily logs)
+    └── daily/           # Daily logs (ephemeral, append-only)
+        └── YYYY-MM-DD.md
 ```
 
 ## Adding a skill
@@ -65,12 +68,15 @@ The agentic loop picks it up automatically.
 | `run_shell` | Execute shell commands (30s timeout, output capped at 3k chars) |
 | `update_soul` | Update agent persona — name, tone, language, behavior rules |
 | `update_user_profile` | Update user info — name, role, location, interests |
+| `log_daily` | Jot a note in today's daily log; important entries auto-promote to long-term memory |
+| `recall_memory` | Keyword search across MEMORY.md and daily logs |
 
 ## Roadmap
 
 - [x] CLI + shell skill + Markdown memory
 - [x] Langfuse observability
-- [ ] Telegram bot interface
+- [x] Telegram bot interface
+- [x] Long-term memory + daily logs + auto-promotion
 - [ ] Scheduled tasks / daily briefing
 - [ ] Web search skill
 - [ ] Gmail / Google Calendar skills

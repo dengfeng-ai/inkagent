@@ -1,6 +1,7 @@
 """LLM agentic loop using Claude tool_use."""
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -8,6 +9,8 @@ import anthropic
 from langfuse import observe, get_client as get_langfuse
 
 from agent import registry, memory
+
+logger = logging.getLogger(__name__)
 
 # Import skills so they self-register — never import skills directly here.
 import skills  # noqa: F401
@@ -20,9 +23,8 @@ You are a helpful personal AI assistant running locally on the user's machine.
 You have access to tools — use them when appropriate.
 When the user tells you how to behave (name, tone, language, rules), use the update_soul tool to persist it.
 When you learn something about the user's identity (name, role, location, interests), use the update_user_profile tool to persist it.
-When the user shares a durable fact, preference, decision, or notable event, use the save_memory tool to persist it. Use recall_memory to look up past memories when relevant.
-Use log_daily to jot down noteworthy things during the conversation — decisions made, problems solved, topics discussed. These are short-lived notes (not long-term memory). Think of it as a daily journal.
-Do NOT save transient info (current tasks, project stats, session context) to MEMORY.md. Use daily log for that instead.
+Use log_daily to jot down anything worth remembering — facts, preferences, decisions, topics discussed, action items. Important entries will be automatically promoted to long-term memory overnight. Use recall_memory to search past memories when relevant.
+Do NOT write to MEMORY.md directly — it is managed by the promotion system.
 
 # User
 {user_profile}
@@ -34,8 +36,28 @@ Do NOT save transient info (current tasks, project stats, session context) to ME
 {daily_logs}
 """
 
+PROMOTION_PROMPT = """\
+You are a memory curator. Review yesterday's daily log and decide what (if anything) \
+is worth keeping in long-term memory.
+
+Current long-term memory (MEMORY.md):
+{long_term_memory}
+
+Yesterday's daily log ({date}):
+{daily_log}
+
+Rules:
+- Only promote durable facts, preferences, decisions, or notable events.
+- Skip anything transient, redundant with existing memory, or too trivial.
+- Use the same format as existing MEMORY.md entries: ## YYYY-MM-DD | category
+- If nothing is worth promoting, respond with exactly: NOTHING
+- Do NOT repeat entries already in MEMORY.md.
+- Be concise. Output ONLY the entries to append (or NOTHING). No explanation.
+"""
+
 client = anthropic.Anthropic()
 MODEL = "claude-sonnet-4-20250514"
+PROMOTION_MODEL = "claude-haiku-4-5-20251001"
 
 # Per-session conversation history and file paths.
 _sessions: dict[str, list[dict]] = {}
@@ -61,10 +83,35 @@ def _save_conversation(session_id: str) -> None:
     )
 
 
+def _maybe_promote() -> None:
+    """Check if yesterday's daily log needs promotion; if so, ask LLM to curate."""
+    if not memory.needs_promotion():
+        return
+
+    ctx = memory.get_promotion_context()
+    prompt = PROMOTION_PROMPT.format(**ctx)
+
+    logger.info("Running memory promotion for %s", ctx["date"])
+    response = client.messages.create(
+        model=PROMOTION_MODEL,
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    text = response.content[0].text.strip()
+    if text == "NOTHING":
+        result = memory.apply_promotion("")
+    else:
+        result = memory.apply_promotion(text)
+    logger.info("Promotion result: %s", result)
+
+
 @observe()
 def run_agent(user_input: str, session_id: str = "cli") -> str:
     """Run one full agentic turn: send message, loop on tool calls, return final text."""
     get_langfuse().update_current_span(input=user_input)
+
+    _maybe_promote()
 
     conversation = _get_conversation(session_id)
     conversation.append({"role": "user", "content": user_input})

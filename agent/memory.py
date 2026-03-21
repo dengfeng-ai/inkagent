@@ -7,9 +7,14 @@ Files:
 - daily/YYYY-MM-DD.md  — daily logs (ephemeral, append-only)
 """
 
+import logging
 import os
 import re
 from datetime import date, timedelta
+
+logger = logging.getLogger(__name__)
+
+PROMOTED_MARKER = "<!-- promoted -->"
 
 MEMORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "memory")
 DAILY_DIR = os.path.join(MEMORY_DIR, "daily")
@@ -134,3 +139,42 @@ def append_daily_log(content: str) -> str:
     with open(path, "a") as f:
         f.write(entry)
     return "Daily log updated."
+
+
+# --- Memory promotion ---
+
+def needs_promotion() -> bool:
+    """Check if yesterday's daily log exists and hasn't been promoted yet."""
+    yesterday = date.today() - timedelta(days=1)
+    path = _daily_log_path(yesterday)
+    content = _read_file(path)
+    return bool(content.strip()) and PROMOTED_MARKER not in content
+
+
+def get_promotion_context() -> dict[str, str]:
+    """Return yesterday's daily log and current MEMORY.md for the promotion prompt."""
+    yesterday = date.today() - timedelta(days=1)
+    return {
+        "daily_log": _read_file(_daily_log_path(yesterday)).strip(),
+        "date": yesterday.isoformat(),
+        "long_term_memory": get_long_term_memory(),
+    }
+
+
+def apply_promotion(entries: str) -> str:
+    """Append promoted entries to MEMORY.md and mark the daily log as processed."""
+    yesterday = date.today() - timedelta(days=1)
+    path = _daily_log_path(yesterday)
+
+    # Append to MEMORY.md if there's anything to promote
+    if entries.strip():
+        _ensure_dir()
+        with open(LONG_TERM_PATH, "a") as f:
+            f.write(f"\n{entries.strip()}\n")
+        logger.info("Promoted entries from %s to MEMORY.md", yesterday.isoformat())
+
+    # Mark daily log as promoted
+    with open(path, "a") as f:
+        f.write(f"\n{PROMOTED_MARKER}\n")
+
+    return "promoted" if entries.strip() else "nothing_to_promote"
