@@ -8,13 +8,20 @@ Inspired by OpenClaw. Built in Python.
 ```
 inkagent/
 ├── main.py              # CLI entry point
+├── bot.py               # Telegram bot entry point
 ├── agent/
 │   ├── brain.py         # LLM agentic loop (tool_use)
 │   ├── memory.py        # Markdown-based memory (read/write)
-│   └── registry.py      # Skill registration system
+│   ├── registry.py      # Skill registration system
+│   ├── prompts.py       # Prompt templates (system, promotion, summary)
+│   ├── session.py       # Conversation history management + JSON persistence
+│   ├── compression.py   # Context window estimation + Haiku summarization
+│   └── promotion.py     # Daily log → MEMORY.md promotion via LLM
 ├── skills/
 │   ├── __init__.py      # Auto-imports all skills
-│   └── shell.py         # run_shell skill
+│   ├── shell.py         # run_shell skill
+│   ├── profile.py       # update_soul + update_user_profile skills
+│   └── memory_skill.py  # recall_memory + log_daily skills
 └── memory/
     ├── SOUL.md          # Agent persona (name, tone, behavior rules)
     ├── USER.md          # User personal info (name, role, interests)
@@ -31,13 +38,16 @@ Skills register themselves via `@registry.register(...)` — adding a skill neve
 - Python 3.11+
 - `anthropic` SDK — Claude Sonnet, tool_use agentic loop
 - Markdown files — all memory storage, no database
-- `python-telegram-bot` — when adding bot interface (not yet implemented)
+- `python-telegram-bot` — Telegram bot interface (`bot.py`)
 
 ## Common Commands
 
 ```bash
 # Run the CLI
 python main.py
+
+# Run the Telegram bot
+python bot.py
 
 # Install dependencies
 pip install -r requirements.txt
@@ -94,14 +104,14 @@ No recursion limit is set — rely on Claude's natural termination behavior.
 ## Code Style
 
 - Type hints on all function signatures
-- No global state except `registry` singleton and `memory` instance in `brain.py`
+- No global state except `registry` singleton; module-level state is scoped to `session.py`, `compression.py`, and `promotion.py`
 - Cap tool output at 3000 chars before returning to avoid context explosion
 - IMPORTANT: Never import skills directly in `brain.py` — always go through `registry`
 
 ## Roadmap (in order)
 
 1. ~~CLI + shell skill + Markdown memory~~ (Phase 1)
-2. Telegram bot interface — wrap `run_agent()` in a message handler
+2. ~~Telegram bot interface~~ — `bot.py`, owner-only, typing indicator
 3. Heartbeat / scheduled tasks — APScheduler, daily briefing
 4. Web search skill
 5. Gmail / Google Calendar skills

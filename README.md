@@ -81,7 +81,11 @@ inkagent/
 ├── agent/
 │   ├── brain.py         # Agentic loop (tool_use)
 │   ├── memory.py        # Markdown memory (read/write)
-│   └── registry.py      # Skill registration
+│   ├── registry.py      # Skill registration
+│   ├── prompts.py       # Prompt templates
+│   ├── session.py       # Conversation history + persistence
+│   ├── compression.py   # Context window compression
+│   └── promotion.py     # Daily log → long-term memory promotion
 ├── skills/
 │   ├── shell.py         # run_shell
 │   ├── profile.py       # update_soul, update_user_profile
