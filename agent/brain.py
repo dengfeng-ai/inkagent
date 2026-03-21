@@ -47,12 +47,20 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
 
     messages = list(conversation)
 
+    collected_text: list[str] = []
+
     try:
         while True:
             response = _call_llm(system, messages, tools)
 
             if response.stop_reason == "tool_use":
                 assistant_content = response.content
+
+                # Capture text blocks before processing tools.
+                for block in assistant_content:
+                    if block.type == "text" and block.text.strip():
+                        collected_text.append(block.text)
+
                 messages.append({"role": "assistant", "content": assistant_content})
 
                 tool_results = []
@@ -67,9 +75,9 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
 
                 messages.append({"role": "user", "content": tool_results})
             else:
-                # end_turn — extract text and return
-                text_parts = [b.text for b in response.content if hasattr(b, "text")]
-                reply = "\n".join(text_parts)
+                # end_turn — combine collected text with final response text.
+                text_parts = [b.text for b in response.content if b.type == "text"]
+                reply = "\n".join(collected_text + text_parts).strip()
                 conversation.append({"role": "assistant", "content": reply})
                 save_conversation(session_id)
                 get_langfuse().update_current_span(output=reply)
