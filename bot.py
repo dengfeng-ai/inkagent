@@ -20,6 +20,7 @@ from telegram.ext import (  # noqa: E402
 from agent.brain import run_agent  # noqa: E402
 from agent.providers import LLMError  # noqa: E402
 from agent.scheduler import run_scheduler  # noqa: E402
+from agent.telegram_format import markdown_to_telegram_html  # noqa: E402
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -45,9 +46,10 @@ def _is_owner(update: Update, owner_id: int) -> bool:
 
 
 async def _send_long_message(update: Update, text: str) -> None:
-    """Send a message, splitting into chunks if it exceeds Telegram's limit."""
-    for i in range(0, len(text), MAX_MSG_LEN):
-        await update.message.reply_text(text[i:i + MAX_MSG_LEN])
+    """Send a message as Telegram HTML, splitting into chunks if needed."""
+    html = markdown_to_telegram_html(text)
+    for i in range(0, len(html), MAX_MSG_LEN):
+        await update.message.reply_text(html[i:i + MAX_MSG_LEN], parse_mode="HTML")
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -108,8 +110,9 @@ def main() -> None:
             logger.warning("Scheduler: skipping non-Telegram session %s", session_id)
             return
         chat_id = int(session_id.removeprefix("tg_"))
-        for i in range(0, len(text), MAX_MSG_LEN):
-            await app.bot.send_message(chat_id=chat_id, text=text[i:i + MAX_MSG_LEN])
+        html = markdown_to_telegram_html(text)
+        for i in range(0, len(html), MAX_MSG_LEN):
+            await app.bot.send_message(chat_id=chat_id, text=html[i:i + MAX_MSG_LEN], parse_mode="HTML")
 
     async def _post_init(_app) -> None:
         """Start the cron scheduler after the bot is fully initialized."""
