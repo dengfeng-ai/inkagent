@@ -118,6 +118,7 @@ async def run_scheduler(send_callback: SendCallback) -> None:
     """
     from agent.brain import run_agent
     from agent.providers import LLMError
+    from agent.session import inject_message
 
     logger.info("Scheduler started")
     # Track last check per timezone so each job fires in its own local time.
@@ -140,12 +141,23 @@ async def run_scheduler(send_callback: SendCallback) -> None:
                 next_fire = cron.get_next(datetime)
                 if next_fire <= now_local:
                     logger.info("Firing cron job %s (tz=%s)", job["id"], tz)
+                    # Run in an isolated session so the user's conversation
+                    # context is not polluted with tool-use intermediate steps.
+                    cron_session_id = f"{job['session_id']}_cron_{job['id']}"
                     try:
                         reply = await asyncio.to_thread(
-                            run_agent, job["prompt"], job["session_id"]
+                            run_agent, job["prompt"], cron_session_id
                         )
                     except LLMError as e:
                         reply = f"[Scheduled task '{job['id']}' failed: {e}]"
+                    # Bridge the final reply into the user's main session
+                    # so follow-up questions have context.  Include a user
+                    # message to keep the conversation structure valid.
+                    inject_message(
+                        job["session_id"], "user",
+                        f"[Scheduled task '{job['id']}' triggered]",
+                    )
+                    inject_message(job["session_id"], "assistant", reply)
                     await send_callback(job["session_id"], reply)
             except Exception:
                 logger.exception("Error processing cron job %s", job["id"])

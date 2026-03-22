@@ -11,6 +11,7 @@ from agent.config import (
 )
 from agent.prompts import SUMMARY_PROMPT
 from agent.providers import get_provider, get_small_model, LLMError
+from agent.session import make_message
 
 logger = logging.getLogger(__name__)
 
@@ -93,14 +94,14 @@ def maybe_compress(conversation: list[dict], system: str, tools: list[dict]) -> 
 
     # Rebuild conversation: summary pair + recent messages
     conversation.clear()
-    conversation.append({
-        "role": "user",
-        "content": f"[Summary of previous conversation]\n{summary}",
-    })
-    conversation.append({
-        "role": "assistant",
-        "content": "Got it, I have the context from our earlier conversation.",
-    })
+    conversation.append(make_message(
+        "user",
+        f"[Summary of previous conversation]\n{summary}",
+    ))
+    conversation.append(make_message(
+        "assistant",
+        "Got it, I have the context from our earlier conversation.",
+    ))
     conversation.extend(kept_messages)
 
     logger.info(

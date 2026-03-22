@@ -7,7 +7,7 @@ from agent import registry, memory
 from agent.config import MAX_REPLY_TOKENS
 from agent.prompts import SYSTEM_PROMPT
 import agent.session as _session
-from agent.session import get_conversation, save_conversation
+from agent.session import get_conversation, save_conversation, make_message
 from agent.compression import maybe_compress
 from agent.promotion import maybe_promote
 from agent.providers import get_provider, get_model, LLMError
@@ -50,7 +50,7 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
     maybe_promote()
 
     conversation = get_conversation(session_id)
-    conversation.append({"role": "user", "content": user_input})
+    conversation.append(make_message("user", user_input))
 
     soul = memory.get_soul()
     user_profile = memory.get_user_profile()
@@ -71,7 +71,8 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
     # Compress conversation if approaching context window limit.
     maybe_compress(conversation, system, tools)
 
-    messages = list(conversation)
+    # Strip extra fields (e.g. timestamp) before sending to the LLM.
+    messages = [{"role": m["role"], "content": m["content"]} for m in conversation]
 
     collected_text: list[str] = []
 
@@ -98,7 +99,7 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
                 # end_turn — combine collected text with final response text.
                 parts = collected_text + ([response.text] if response.text else [])
                 reply = "\n".join(parts).strip()
-                conversation.append({"role": "assistant", "content": reply})
+                conversation.append(make_message("assistant", reply))
                 save_conversation(session_id)
                 _get_langfuse().update_current_span(output=reply)
                 return reply
