@@ -93,8 +93,13 @@ Note: when running locally, `run_shell` executes commands directly on your machi
 you> remember that I prefer dark mode
 
 agent> [calls update_user_profile] → saves to memory/USER.md
-agent> [calls log_daily] → appends to memory/daily/2025-03-21.md
+agent> [calls save_memory] → writes directly to memory/MEMORY.md
 agent> Got it, noted your preference for dark mode.
+
+you> today we discussed migrating to PostgreSQL
+
+agent> [calls log_daily] → appends to memory/daily/2025-03-21.md
+agent> Logged.
 
 # Next day, the promotion system reviews yesterday's log
 # and decides if anything is worth keeping in MEMORY.md
@@ -108,7 +113,7 @@ All memory lives in `memory/` as plain Markdown:
 |------|---------|------------|
 | `SOUL.md` | Agent persona — name, tone, language, behavior rules | `update_soul` tool |
 | `USER.md` | User profile — name, role, interests | `update_user_profile` tool |
-| `MEMORY.md` | Long-term memory — curated facts and decisions | Automatic promotion |
+| `MEMORY.md` | Long-term memory — curated facts and decisions | `save_memory` tool + automatic promotion |
 | `daily/YYYY-MM-DD.md` | Daily log — ephemeral notes, one file per day | `log_daily` tool |
 
 The agent sees `SOUL.md`, `USER.md`, `MEMORY.md`, and the last two days of daily logs in every conversation.
@@ -138,7 +143,7 @@ inkagent/
 │   ├── shell.py         # run_shell
 │   ├── files.py         # read_file, write_file, edit_file, list_directory
 │   ├── profile.py       # update_soul, update_user_profile
-│   ├── memory_skill.py  # log_daily, recall_memory
+│   ├── memory_skill.py  # log_daily, recall_memory, save_memory
 │   ├── cron.py          # create_cron, list_crons, delete_cron
 │   ├── web_search.py    # web_search (Brave Search API)
 │   └── web_fetch.py     # web_fetch (page content extraction)
@@ -166,6 +171,7 @@ Key design: `brain.py` has zero knowledge of individual skills. Skills register 
 | `update_soul` | Update agent persona — name, tone, language, behavior rules |
 | `update_user_profile` | Update user info — name, role, location, interests |
 | `log_daily` | Jot a note in today's daily log; important entries auto-promote to long-term memory |
+| `save_memory` | Save important info directly to long-term memory (MEMORY.md) |
 | `recall_memory` | Keyword search across MEMORY.md and daily logs |
 | `web_search` | Search the web via Brave Search API — returns title, snippet, URL |
 | `web_fetch` | Fetch a URL and extract readable text content |

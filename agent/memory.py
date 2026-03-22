@@ -74,6 +74,19 @@ def get_long_term_memory() -> str:
     return _read_file(LONG_TERM_PATH).strip()
 
 
+def save_memory(content: str) -> str:
+    """Append an entry directly to MEMORY.md. Used for explicit 'remember this' requests."""
+    _ensure_dir()
+    today = date.today().isoformat()
+    entry = f"\n## {today} | saved\n{content.strip()}\n"
+    try:
+        with open(LONG_TERM_PATH, "a") as f:
+            f.write(entry)
+    except OSError as e:
+        logger.error("Failed to save memory: %s", e)
+        return f"Error saving memory: {e}"
+    return "Saved to long-term memory."
+
 
 def recall_memory(query: str) -> str:
     """Search MEMORY.md and daily logs by keyword. Returns matching entries."""

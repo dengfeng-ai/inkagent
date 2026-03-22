@@ -3,6 +3,7 @@
 from agent.registry import register
 from agent.memory import recall_memory as _recall_memory
 from agent.memory import append_daily_log as _append_daily_log
+from agent.memory import save_memory as _save_memory
 
 
 @register(
@@ -39,3 +40,21 @@ def recall_memory(query: str) -> str:
 )
 def log_daily(content: str) -> str:
     return _append_daily_log(content)
+
+
+@register(
+    name="save_memory",
+    description="Save important information directly to long-term memory (MEMORY.md). Use this when the user explicitly asks you to remember something durable — facts, preferences, decisions, or reference info that should persist beyond today. For transient notes, use log_daily instead.",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "content": {
+                "type": "string",
+                "description": "The information to save (concise, factual)",
+            },
+        },
+        "required": ["content"],
+    },
+)
+def save_memory(content: str) -> str:
+    return _save_memory(content)

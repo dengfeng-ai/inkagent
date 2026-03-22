@@ -91,7 +91,7 @@ Three-tier Markdown memory in `memory/`:
 
 - **`SOUL.md`** — Agent persona. Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (name, tone, language, style).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
-- **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Populated exclusively by the automatic promotion system (no direct write tool).
+- **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Writable via `save_memory` tool (for explicit "remember this" requests) and via the automatic promotion system.
 - **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). `recall_memory` searches across both MEMORY.md and daily logs.
 
 **Memory promotion**: On the first conversation turn each day, the system checks if yesterday's daily log exists and hasn't been promoted. If so, it sends the log + current MEMORY.md to the small model (`LLM_SMALL_MODEL`), which decides what's worth keeping long-term. Promoted entries are appended to MEMORY.md; the daily log is marked `<!-- promoted -->` to prevent re-processing.
@@ -140,6 +140,7 @@ Built-in skills:
 - `update_user_profile` — rewrites `memory/USER.md` with user personal info
 - `recall_memory` — keyword search across MEMORY.md and daily logs
 - `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`); important entries are auto-promoted to MEMORY.md overnight
+- `save_memory` — saves important information directly to long-term memory (`MEMORY.md`); use for explicit "remember this" requests
 - `read_file` — reads a file's text content (truncated at `TOOL_OUTPUT_CAP` chars)
 - `write_file` — writes content to a file, creating parent directories as needed
 - `edit_file` — replaces an exact unique string match in a file (search-and-replace)
