@@ -227,6 +227,7 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 - [x] File operation skills (read, write, edit, list)
 - [x] Scheduled tasks (cron scheduler + skills)
 - [x] Web search + page fetch skills
+- [ ] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
 - [ ] Gmail / Google Calendar skills
 
 ## License
