@@ -27,7 +27,9 @@ inkagent/
 │   ├── __init__.py      # Auto-imports all skills
 │   ├── shell.py         # run_shell skill
 │   ├── profile.py       # update_soul + update_user_profile skills
-│   └── memory_skill.py  # recall_memory + log_daily skills
+│   ├── memory_skill.py  # recall_memory + log_daily skills
+│   ├── web_search.py    # web_search skill (Brave Search API)
+│   └── web_fetch.py     # web_fetch skill (HTTP + trafilatura)
 └── memory/
     ├── SOUL.md          # Agent persona (name, tone, behavior rules)
     ├── USER.md          # User personal info (name, role, interests)
@@ -45,6 +47,8 @@ Skills register themselves via `@registry.register(...)` — adding a skill neve
 - `anthropic` SDK + `openai` SDK — pluggable via `agent/providers/`
 - Markdown files — all memory storage, no database
 - `python-telegram-bot` — Telegram bot interface (`bot.py`)
+- `httpx` — HTTP client for web search and fetch
+- `trafilatura` — HTML content extraction for `web_fetch`
 
 ## Common Commands
 
@@ -73,6 +77,7 @@ cat memory/USER.md
 | `LLM_PROVIDER` | `anthropic` | `anthropic` or `openai` |
 | `LLM_MODEL` | per-provider | Main model (e.g. `claude-sonnet-4-20250514`, `gpt-4o`) |
 | `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (e.g. `claude-haiku-4-5-20251001`, `gpt-4o-mini`) |
+| `BRAVE_API_KEY` | — | Brave Search API key (required for `web_search` skill) |
 
 ## Memory System
 
@@ -107,6 +112,8 @@ Built-in skills:
 - `update_user_profile` — rewrites `memory/USER.md` with user personal info
 - `recall_memory` — keyword search across MEMORY.md and daily logs
 - `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`); important entries are auto-promoted to MEMORY.md overnight
+- `web_search` — searches the web via Brave Search API, returns title + snippet + URL list
+- `web_fetch` — fetches a URL and extracts readable text content via `trafilatura`
 
 ## Agentic Loop
 
@@ -142,5 +149,5 @@ IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — alway
 1. ~~CLI + shell skill + Markdown memory~~ (Phase 1)
 2. ~~Telegram bot interface~~ — `bot.py`, owner-only, typing indicator
 3. Heartbeat / scheduled tasks — APScheduler, daily briefing
-4. Web search skill
+4. ~~Web search skill~~ — `web_search` (Brave) + `web_fetch` (trafilatura)
 5. Gmail / Google Calendar skills

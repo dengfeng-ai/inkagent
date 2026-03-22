@@ -35,7 +35,7 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
 
 ### Option A: Docker (recommended)
 
-Docker 更安全 — `run_shell` 等工具在容器内执行，不会影响宿主机。
+Docker is recommended — tools like `run_shell` execute inside the container, keeping your host machine safe.
 
 ```bash
 docker build -t inkagent .
@@ -47,7 +47,7 @@ docker run -it --env-file .env inkagent
 docker run --env-file .env inkagent python bot.py
 ```
 
-持久化 `memory/` 和 `conversations/`，避免容器重启后数据丢失：
+Mount `memory/` and `conversations/` to persist data across container restarts:
 
 ```bash
 # CLI mode
@@ -84,7 +84,7 @@ python main.py          # CLI mode
 python bot.py           # Telegram bot (requires TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_ID in .env)
 ```
 
-Note: 本地运行时 `run_shell` 直接在你的机器上执行命令，请注意安全。
+Note: when running locally, `run_shell` executes commands directly on your machine — use with caution.
 
 ## How It Works
 
@@ -134,7 +134,9 @@ inkagent/
 ├── skills/
 │   ├── shell.py         # run_shell
 │   ├── profile.py       # update_soul, update_user_profile
-│   └── memory_skill.py  # log_daily, recall_memory
+│   ├── memory_skill.py  # log_daily, recall_memory
+│   ├── web_search.py    # web_search (Brave Search API)
+│   └── web_fetch.py     # web_fetch (page content extraction)
 └── memory/              # All memory (gitignored)
     ├── SOUL.md
     ├── USER.md
@@ -153,6 +155,8 @@ Key design: `brain.py` has zero knowledge of individual skills. Skills register 
 | `update_user_profile` | Update user info — name, role, location, interests |
 | `log_daily` | Jot a note in today's daily log; important entries auto-promote to long-term memory |
 | `recall_memory` | Keyword search across MEMORY.md and daily logs |
+| `web_search` | Search the web via Brave Search API — returns title, snippet, URL |
+| `web_fetch` | Fetch a URL and extract readable text content |
 
 ## Adding a Skill
 
@@ -195,6 +199,7 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 | `LLM_PROVIDER` | No | `anthropic` (default) or `openai` |
 | `LLM_MODEL` | No | Main model (default: `claude-sonnet-4-20250514` / `gpt-4o`) |
 | `LLM_SMALL_MODEL` | No | Cheap model for compression/promotion (default: `claude-haiku-4-5-20251001` / `gpt-4o-mini`) |
+| `BRAVE_API_KEY` | For web search | [Brave Search API](https://brave.com/search/api/) key (free: 2000 queries/mo) |
 | `TELEGRAM_BOT_TOKEN` | For bot | Telegram bot token from @BotFather |
 | `TELEGRAM_OWNER_ID` | For bot | Your numeric Telegram user ID |
 | `LANGFUSE_PUBLIC_KEY` | No | Langfuse observability |
@@ -208,7 +213,7 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 - [x] Telegram bot interface
 - [x] Long-term memory + daily logs + auto-promotion
 - [ ] Scheduled tasks / daily briefing
-- [ ] Web search skill
+- [x] Web search + page fetch skills
 - [ ] Gmail / Google Calendar skills
 
 ## License
