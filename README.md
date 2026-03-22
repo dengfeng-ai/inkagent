@@ -9,6 +9,7 @@ Inspired by [OpenClaw](https://github.com/nichochar/open-claw). Built in Python.
 - **Agentic tool-use loop** — sends your message to the LLM, executes tools, feeds results back, repeats until done
 - **Markdown memory** — persona, user profile, long-term memory, daily logs — all plain `.md` files you can read and edit
 - **Auto memory promotion** — daily logs are curated into long-term memory overnight via a small model
+- **Semantic memory search** — daily logs indexed with sqlite-vec for vector search (requires OpenAI API key for embeddings, falls back to keyword search)
 - **Multi-provider** — supports Anthropic (Claude) and OpenAI out of the box, switchable via env var
 - **Self-registering skills** — add capabilities by dropping in a decorated Python function
 - **Scheduled tasks** — cron-based scheduler lets the agent reach out proactively (e.g. daily briefings)
@@ -115,8 +116,11 @@ All memory lives in `memory/` as plain Markdown:
 | `USER.md` | User profile — name, role, interests | `update_user_profile` tool |
 | `MEMORY.md` | Long-term memory — curated facts and decisions | `save_memory` tool + automatic promotion |
 | `daily/YYYY-MM-DD.md` | Daily log — ephemeral notes, one file per day | `log_daily` tool |
+| `vectors.db` | sqlite-vec index for semantic search over daily logs | Auto-managed |
 
 The agent sees `SOUL.md`, `USER.md`, `MEMORY.md`, and the last two days of daily logs in every conversation.
+
+**Semantic search**: Daily log entries are automatically embedded and indexed in `vectors.db` when `OPENAI_API_KEY` is set. `recall_memory` uses vector similarity for daily logs (keyword fallback without an API key). `MEMORY.md` is not searched — it's already in the system prompt.
 
 ## Architecture
 
@@ -135,6 +139,7 @@ inkagent/
 │   ├── promotion.py     # Daily log → long-term memory promotion
 │   ├── scheduler.py     # Cron scheduler (asyncio + croniter)
 │   ├── telegram_format.py # Markdown → Telegram HTML converter
+│   ├── vector_store.py  # sqlite-vec vector store for semantic search
 │   └── providers/       # Pluggable LLM providers
 │       ├── base.py      # LLMProvider ABC + shared types
 │       ├── anthropic.py # Anthropic (Claude)
@@ -172,7 +177,7 @@ Key design: `brain.py` has zero knowledge of individual skills. Skills register 
 | `update_user_profile` | Update user info — name, role, location, interests |
 | `log_daily` | Jot a note in today's daily log; important entries auto-promote to long-term memory |
 | `save_memory` | Save important info directly to long-term memory (MEMORY.md) |
-| `recall_memory` | Keyword search across MEMORY.md and daily logs |
+| `recall_memory` | Search daily logs (semantic when available, keyword fallback) |
 | `web_search` | Search the web via Brave Search API — returns title, snippet, URL |
 | `web_fetch` | Fetch a URL and extract readable text content |
 
@@ -213,7 +218,7 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `ANTHROPIC_API_KEY` | For Anthropic | Claude API key |
-| `OPENAI_API_KEY` | For OpenAI | OpenAI API key |
+| `OPENAI_API_KEY` | For OpenAI | OpenAI API key (also enables semantic memory search when using Anthropic) |
 | `LLM_PROVIDER` | No | `anthropic` (default) or `openai` |
 | `LLM_MODEL` | No | Main model (default: `claude-sonnet-4-20250514` / `gpt-4o`) |
 | `LLM_SMALL_MODEL` | No | Cheap model for compression/promotion (default: `claude-haiku-4-5-20251001` / `gpt-4o-mini`) |
@@ -233,6 +238,7 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 - [x] File operation skills (read, write, edit, list)
 - [x] Scheduled tasks (cron scheduler + skills)
 - [x] Web search + page fetch skills
+- [x] Semantic memory search (sqlite-vec + OpenAI embeddings, graceful degradation)
 - [ ] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
 - [ ] Gmail / Google Calendar skills
 

@@ -8,7 +8,7 @@ from agent.memory import save_memory as _save_memory
 
 @register(
     name="recall_memory",
-    description="Search long-term memory (MEMORY.md) by keyword. Use this to look up previously stored facts, preferences, decisions, or events.",
+    description="Search daily logs — uses semantic search when available, keyword search otherwise. Use this to look up past conversations, decisions, or events. Note: MEMORY.md is already in context, so this only searches daily logs.",
     input_schema={
         "type": "object",
         "properties": {

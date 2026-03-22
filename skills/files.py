@@ -5,6 +5,16 @@ import os
 from agent.config import TOOL_OUTPUT_CAP
 from agent.registry import register
 
+# Files that must not be modified by the LLM.
+_PROTECTED_SUFFIXES = (".db", ".sqlite", ".sqlite3")
+
+
+def _is_protected(path: str) -> str | None:
+    """Return an error message if the path is protected, else None."""
+    if path.endswith(_PROTECTED_SUFFIXES):
+        return f"Error: {os.path.basename(path)} is a managed database file and cannot be modified directly."
+    return None
+
 
 @register(
     name="read_file",
@@ -57,6 +67,8 @@ def read_file(path: str) -> str:
 )
 def write_file(path: str, content: str) -> str:
     path = os.path.expanduser(path)
+    if err := _is_protected(path):
+        return err
     try:
         parent = os.path.dirname(path)
         if parent:
@@ -94,6 +106,8 @@ def write_file(path: str, content: str) -> str:
 )
 def edit_file(path: str, old_string: str, new_string: str) -> str:
     path = os.path.expanduser(path)
+    if err := _is_protected(path):
+        return err
     try:
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()

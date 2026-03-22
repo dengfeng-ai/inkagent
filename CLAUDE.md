@@ -20,6 +20,7 @@ inkagent/
 │   ├── promotion.py     # Daily log → MEMORY.md promotion via LLM
 │   ├── scheduler.py     # Cron scheduler (asyncio loop + croniter)
 │   ├── telegram_format.py # Markdown → Telegram HTML converter
+│   ├── vector_store.py  # sqlite-vec vector store for semantic search over daily logs
 │   └── providers/       # Pluggable LLM provider abstraction
 │       ├── __init__.py  # Factory: get_provider(), get_model(), get_small_model()
 │       ├── base.py      # LLMProvider ABC + LLMResponse/ToolCall/LLMError types
@@ -28,9 +29,9 @@ inkagent/
 ├── skills/
 │   ├── __init__.py      # Auto-imports all skills
 │   ├── shell.py         # run_shell skill
-│   ├── files.py         # read_file, write_file, edit_file, list_directory skills
+│   ├── files.py         # read_file, write_file, edit_file, list_directory skills (write/edit block .db files)
 │   ├── profile.py       # update_soul + update_user_profile skills
-│   ├── memory_skill.py  # recall_memory + log_daily skills
+│   ├── memory_skill.py  # recall_memory, log_daily, save_memory skills
 │   ├── cron.py          # create_cron, list_crons, delete_cron skills
 │   ├── web_search.py    # web_search skill (Brave Search API)
 │   └── web_fetch.py     # web_fetch skill (HTTP + trafilatura)
@@ -49,7 +50,8 @@ Skills register themselves via `@registry.register(...)` — adding a skill neve
 
 - Python 3.11+
 - `anthropic` SDK + `openai` SDK — pluggable via `agent/providers/`
-- Markdown files — all memory storage, no database
+- Markdown files — all memory storage
+- `sqlite-vec` — vector storage for semantic search over daily logs (`memory/vectors.db`)
 - `python-telegram-bot` — Telegram bot interface (`bot.py`)
 - `httpx` — HTTP client for web search and fetch
 - `trafilatura` — HTML content extraction for `web_fetch`
@@ -92,7 +94,10 @@ Three-tier Markdown memory in `memory/`:
 - **`SOUL.md`** — Agent persona. Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (name, tone, language, style).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
 - **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Writable via `save_memory` tool (for explicit "remember this" requests) and via the automatic promotion system.
-- **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). `recall_memory` searches across both MEMORY.md and daily logs.
+- **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). Each entry is also indexed into the vector store for semantic search.
+- **`vectors.db`** — sqlite-vec database for semantic search over daily logs. Auto-created when an embedding provider is available. Not required — system degrades to keyword search without it.
+
+**Vector search**: `recall_memory` uses semantic search (sqlite-vec + OpenAI embeddings) for daily logs when `OPENAI_API_KEY` is set. Falls back to keyword search otherwise. MEMORY.md is not searched by `recall_memory` — it's already injected into the system prompt, so the LLM can see it directly.
 
 **Memory promotion**: On the first conversation turn each day, the system checks if yesterday's daily log exists and hasn't been promoted. If so, it sends the log + current MEMORY.md to the small model (`LLM_SMALL_MODEL`), which decides what's worth keeping long-term. Promoted entries are appended to MEMORY.md; the daily log is marked `<!-- promoted -->` to prevent re-processing.
 
@@ -138,7 +143,7 @@ Built-in skills:
 - `run_shell` — executes shell commands, 30s timeout, output capped at 3000 chars
 - `update_soul` — rewrites `memory/SOUL.md` with agent persona settings
 - `update_user_profile` — rewrites `memory/USER.md` with user personal info
-- `recall_memory` — keyword search across MEMORY.md and daily logs
+- `recall_memory` — semantic search over daily logs (via sqlite-vec, when OpenAI embedding available); falls back to keyword search. Only searches daily logs — MEMORY.md is already in the system prompt
 - `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`); important entries are auto-promoted to MEMORY.md overnight
 - `save_memory` — saves important information directly to long-term memory (`MEMORY.md`); use for explicit "remember this" requests
 - `read_file` — reads a file's text content (truncated at `TOOL_OUTPUT_CAP` chars)
@@ -175,7 +180,7 @@ IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — alway
 ## Code Style
 
 - Type hints on all function signatures
-- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, `scheduler.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
+- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, `scheduler.py`, `vector_store.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
 - Cap tool output at `TOOL_OUTPUT_CAP` chars (see `agent/config.py`) before returning to avoid context explosion
 - IMPORTANT: Never import skills directly in `brain.py` — always go through `registry`
 - IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — always go through `providers`

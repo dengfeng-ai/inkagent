@@ -88,21 +88,10 @@ def save_memory(content: str) -> str:
     return "Saved to long-term memory."
 
 
-def recall_memory(query: str) -> str:
-    """Search MEMORY.md and daily logs by keyword. Returns matching entries."""
+def keyword_search_daily(query: str) -> list[str]:
+    """Keyword search across daily log files. Returns list of formatted matches."""
     results: list[str] = []
     query_lower = query.lower()
-
-    # Search MEMORY.md
-    raw = _read_file(LONG_TERM_PATH)
-    if raw.strip():
-        entries = re.split(r"(?=^## )", raw, flags=re.MULTILINE)
-        entries = [e.strip() for e in entries if e.strip()]
-        for e in entries:
-            if query_lower in e.lower():
-                results.append(f"[MEMORY.md] {e}")
-
-    # Search daily logs
     if os.path.isdir(DAILY_DIR):
         for filename in sorted(os.listdir(DAILY_DIR), reverse=True):
             if not filename.endswith(".md"):
@@ -111,6 +100,30 @@ def recall_memory(query: str) -> str:
             content = _read_file(path)
             if query_lower in content.lower():
                 results.append(f"[{filename}] {content.strip()}")
+    return results
+
+
+def recall_memory(query: str) -> str:
+    """Search daily logs: vector search if available, keyword fallback otherwise."""
+    results: list[str] = []
+
+    # Try vector search for daily logs.
+    vector_results: list[dict] = []
+    try:
+        from agent.vector_store import get_vector_store
+
+        vs = get_vector_store()
+        if vs.is_available():
+            vector_results = vs.search(query)
+    except Exception as e:
+        logger.debug("Vector search failed, falling back to keyword: %s", e)
+
+    if vector_results:
+        for r in vector_results:
+            results.append(f"[{r['source']}] {r['content']}")
+    else:
+        # Fallback: keyword search daily logs.
+        results.extend(keyword_search_daily(query))
 
     if not results:
         return f"No memories found matching '{query}'."
@@ -153,6 +166,17 @@ def append_daily_log(content: str) -> str:
     except OSError as e:
         logger.error("Failed to append daily log: %s", e)
         return f"Error writing daily log: {e}"
+
+    # Index into vector store (silent failure).
+    try:
+        from agent.vector_store import get_vector_store
+
+        vs = get_vector_store()
+        if vs.is_available():
+            vs.index_daily_entry(today.isoformat(), entry.strip())
+    except Exception as e:
+        logger.debug("Vector indexing skipped: %s", e)
+
     return "Daily log updated."
 
 

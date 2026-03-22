@@ -19,3 +19,7 @@ SHELL_TIMEOUT = 30  # seconds
 WEB_SEARCH_COUNT = 5  # number of search results to return
 WEB_FETCH_TIMEOUT = 15  # seconds
 WEB_FETCH_MAX_CHARS = 20_000  # max chars extracted from a page (before TOOL_OUTPUT_CAP)
+
+# Vector search
+EMBEDDING_MODEL = "text-embedding-3-small"
+VECTOR_SEARCH_TOP_K = 5
