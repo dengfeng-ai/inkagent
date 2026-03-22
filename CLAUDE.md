@@ -26,6 +26,7 @@ inkagent/
 ├── skills/
 │   ├── __init__.py      # Auto-imports all skills
 │   ├── shell.py         # run_shell skill
+│   ├── files.py         # read_file, write_file, edit_file, list_directory skills
 │   ├── profile.py       # update_soul + update_user_profile skills
 │   ├── memory_skill.py  # recall_memory + log_daily skills
 │   ├── web_search.py    # web_search skill (Brave Search API)
@@ -112,6 +113,10 @@ Built-in skills:
 - `update_user_profile` — rewrites `memory/USER.md` with user personal info
 - `recall_memory` — keyword search across MEMORY.md and daily logs
 - `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`); important entries are auto-promoted to MEMORY.md overnight
+- `read_file` — reads a file's text content (truncated at `TOOL_OUTPUT_CAP` chars)
+- `write_file` — writes content to a file, creating parent directories as needed
+- `edit_file` — replaces an exact unique string match in a file (search-and-replace)
+- `list_directory` — lists files and subdirectories at a given path
 - `web_search` — searches the web via Brave Search API, returns title + snippet + URL list
 - `web_fetch` — fetches a URL and extracts readable text content via `trafilatura`
 

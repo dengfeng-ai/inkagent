@@ -133,6 +133,7 @@ inkagent/
 │       └── openai.py    # OpenAI
 ├── skills/
 │   ├── shell.py         # run_shell
+│   ├── files.py         # read_file, write_file, edit_file, list_directory
 │   ├── profile.py       # update_soul, update_user_profile
 │   ├── memory_skill.py  # log_daily, recall_memory
 │   ├── web_search.py    # web_search (Brave Search API)
@@ -151,6 +152,10 @@ Key design: `brain.py` has zero knowledge of individual skills. Skills register 
 | Skill | Description |
 |-------|-------------|
 | `run_shell` | Execute shell commands (30s timeout, output capped at 3k chars) |
+| `read_file` | Read a file's text content (truncated if too large) |
+| `write_file` | Write content to a file, creating parent directories as needed |
+| `edit_file` | Replace an exact unique string match in a file (search-and-replace) |
+| `list_directory` | List files and subdirectories at a given path |
 | `update_soul` | Update agent persona — name, tone, language, behavior rules |
 | `update_user_profile` | Update user info — name, role, location, interests |
 | `log_daily` | Jot a note in today's daily log; important entries auto-promote to long-term memory |
@@ -212,6 +217,7 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 - [x] Langfuse observability
 - [x] Telegram bot interface
 - [x] Long-term memory + daily logs + auto-promotion
+- [x] File operation skills (read, write, edit, list)
 - [ ] Scheduled tasks / daily briefing
 - [x] Web search + page fetch skills
 - [ ] Gmail / Google Calendar skills

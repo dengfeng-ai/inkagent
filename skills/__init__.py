@@ -5,3 +5,4 @@ from skills import profile  # noqa: F401
 from skills import memory_skill  # noqa: F401
 from skills import web_search  # noqa: F401
 from skills import web_fetch  # noqa: F401
+from skills import files  # noqa: F401
