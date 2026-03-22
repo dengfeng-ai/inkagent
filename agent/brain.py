@@ -6,6 +6,7 @@ import os
 from agent import registry, memory
 from agent.config import MAX_REPLY_TOKENS
 from agent.prompts import SYSTEM_PROMPT
+import agent.session as _session
 from agent.session import get_conversation, save_conversation
 from agent.compression import maybe_compress
 from agent.promotion import maybe_promote
@@ -45,6 +46,7 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
     """Run one full agentic turn: send message, loop on tool calls, return final text."""
     _get_langfuse().update_current_span(input=user_input)
 
+    _session.current_session_id = session_id
     maybe_promote()
 
     conversation = get_conversation(session_id)

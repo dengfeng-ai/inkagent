@@ -11,6 +11,7 @@ Inspired by [OpenClaw](https://github.com/nichochar/open-claw). Built in Python.
 - **Auto memory promotion** — daily logs are curated into long-term memory overnight via a small model
 - **Multi-provider** — supports Anthropic (Claude) and OpenAI out of the box, switchable via env var
 - **Self-registering skills** — add capabilities by dropping in a decorated Python function
+- **Scheduled tasks** — cron-based scheduler lets the agent reach out proactively (e.g. daily briefings)
 - **Two interfaces** — CLI (`main.py`) or Telegram bot (`bot.py`)
 - **Observability** — optional [Langfuse](https://langfuse.com) tracing for all LLM calls and tool executions
 
@@ -127,6 +128,7 @@ inkagent/
 │   ├── session.py       # Conversation history + persistence
 │   ├── compression.py   # Context window compression
 │   ├── promotion.py     # Daily log → long-term memory promotion
+│   ├── scheduler.py     # Cron scheduler (asyncio + croniter)
 │   └── providers/       # Pluggable LLM providers
 │       ├── base.py      # LLMProvider ABC + shared types
 │       ├── anthropic.py # Anthropic (Claude)
@@ -136,6 +138,7 @@ inkagent/
 │   ├── files.py         # read_file, write_file, edit_file, list_directory
 │   ├── profile.py       # update_soul, update_user_profile
 │   ├── memory_skill.py  # log_daily, recall_memory
+│   ├── cron.py          # create_cron, list_crons, delete_cron
 │   ├── web_search.py    # web_search (Brave Search API)
 │   └── web_fetch.py     # web_fetch (page content extraction)
 └── memory/              # All memory (gitignored)
@@ -156,6 +159,9 @@ Key design: `brain.py` has zero knowledge of individual skills. Skills register 
 | `write_file` | Write content to a file, creating parent directories as needed |
 | `edit_file` | Replace an exact unique string match in a file (search-and-replace) |
 | `list_directory` | List files and subdirectories at a given path |
+| `create_cron` | Create a scheduled task (cron expression + prompt), bound to current session |
+| `list_crons` | List all scheduled tasks |
+| `delete_cron` | Delete a scheduled task by ID |
 | `update_soul` | Update agent persona — name, tone, language, behavior rules |
 | `update_user_profile` | Update user info — name, role, location, interests |
 | `log_daily` | Jot a note in today's daily log; important entries auto-promote to long-term memory |
@@ -218,7 +224,7 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 - [x] Telegram bot interface
 - [x] Long-term memory + daily logs + auto-promotion
 - [x] File operation skills (read, write, edit, list)
-- [ ] Scheduled tasks / daily briefing
+- [x] Scheduled tasks (cron scheduler + skills)
 - [x] Web search + page fetch skills
 - [ ] Gmail / Google Calendar skills
 

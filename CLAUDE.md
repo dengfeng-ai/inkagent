@@ -18,6 +18,7 @@ inkagent/
 │   ├── session.py       # Conversation history management + JSON persistence
 │   ├── compression.py   # Context window estimation + small-model summarization
 │   ├── promotion.py     # Daily log → MEMORY.md promotion via LLM
+│   ├── scheduler.py     # Cron scheduler (asyncio loop + croniter)
 │   └── providers/       # Pluggable LLM provider abstraction
 │       ├── __init__.py  # Factory: get_provider(), get_model(), get_small_model()
 │       ├── base.py      # LLMProvider ABC + LLMResponse/ToolCall/LLMError types
@@ -29,6 +30,7 @@ inkagent/
 │   ├── files.py         # read_file, write_file, edit_file, list_directory skills
 │   ├── profile.py       # update_soul + update_user_profile skills
 │   ├── memory_skill.py  # recall_memory + log_daily skills
+│   ├── cron.py          # create_cron, list_crons, delete_cron skills
 │   ├── web_search.py    # web_search skill (Brave Search API)
 │   └── web_fetch.py     # web_fetch skill (HTTP + trafilatura)
 └── memory/
@@ -50,6 +52,7 @@ Skills register themselves via `@registry.register(...)` — adding a skill neve
 - `python-telegram-bot` — Telegram bot interface (`bot.py`)
 - `httpx` — HTTP client for web search and fetch
 - `trafilatura` — HTML content extraction for `web_fetch`
+- `croniter` — Cron expression parsing for scheduled tasks
 
 ## Common Commands
 
@@ -94,6 +97,18 @@ Three-tier Markdown memory in `memory/`:
 Conversation history is kept in-memory for the current session, auto-saved to `conversations/` as JSON.
 The `memory/` directory is gitignored — never commit it.
 
+## Scheduler (Cron)
+
+`agent/scheduler.py` provides a cron-based task scheduler. Jobs are persisted in `memory/crons.json`.
+
+- The scheduler runs as an asyncio background task, checking every 60 seconds
+- When a job fires, it calls `run_agent(prompt, session_id)` and delivers the reply via a callback
+- In Telegram bot mode (`bot.py`), the scheduler starts automatically and sends replies to the bound chat
+- In CLI mode, the scheduler does not run (no persistent event loop), but cron skills still work — jobs created in CLI take effect when the bot starts
+- Jobs are bound to a `session_id` (e.g. `tg_123456`) at creation time via `session.current_session_id`
+- **Timezone-aware**: each job stores an IANA timezone (default: `Asia/Shanghai`). Cron expressions are interpreted in the job's timezone, so "0 9 * * *" means 9 AM local time
+- Uses `croniter` for cron expression parsing, no heavy scheduler framework
+
 ## Skill System
 
 Each skill is a Python function decorated with `@registry.register(...)`.
@@ -117,6 +132,9 @@ Built-in skills:
 - `write_file` — writes content to a file, creating parent directories as needed
 - `edit_file` — replaces an exact unique string match in a file (search-and-replace)
 - `list_directory` — lists files and subdirectories at a given path
+- `create_cron` — creates a scheduled task with a cron expression + prompt; binds to the current session
+- `list_crons` — lists all scheduled tasks
+- `delete_cron` — deletes a scheduled task by ID
 - `web_search` — searches the web via Brave Search API, returns title + snippet + URL list
 - `web_fetch` — fetches a URL and extracts readable text content via `trafilatura`
 
@@ -144,7 +162,7 @@ IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — alway
 ## Code Style
 
 - Type hints on all function signatures
-- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
+- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, `scheduler.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
 - Cap tool output at `TOOL_OUTPUT_CAP` chars (see `agent/config.py`) before returning to avoid context explosion
 - IMPORTANT: Never import skills directly in `brain.py` — always go through `registry`
 - IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — always go through `providers`
@@ -153,6 +171,6 @@ IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — alway
 
 1. ~~CLI + shell skill + Markdown memory~~ (Phase 1)
 2. ~~Telegram bot interface~~ — `bot.py`, owner-only, typing indicator
-3. Heartbeat / scheduled tasks — APScheduler, daily briefing
+3. ~~Scheduled tasks~~ — cron scheduler (`croniter` + asyncio), `create_cron` / `list_crons` / `delete_cron` skills
 4. ~~Web search skill~~ — `web_search` (Brave) + `web_fetch` (trafilatura)
 5. Gmail / Google Calendar skills

@@ -19,6 +19,7 @@ from telegram.ext import (  # noqa: E402
 
 from agent.brain import run_agent  # noqa: E402
 from agent.providers import LLMError  # noqa: E402
+from agent.scheduler import run_scheduler  # noqa: E402
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -99,6 +100,23 @@ def main() -> None:
     app = ApplicationBuilder().token(bot_token).build()
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    # --- Scheduler integration ---
+    async def _send_scheduled_message(session_id: str, text: str) -> None:
+        """Deliver a scheduled task reply to the right Telegram chat."""
+        if not session_id.startswith("tg_"):
+            logger.warning("Scheduler: skipping non-Telegram session %s", session_id)
+            return
+        chat_id = int(session_id.removeprefix("tg_"))
+        for i in range(0, len(text), MAX_MSG_LEN):
+            await app.bot.send_message(chat_id=chat_id, text=text[i:i + MAX_MSG_LEN])
+
+    async def _post_init(_app) -> None:
+        """Start the cron scheduler after the bot is fully initialized."""
+        asyncio.create_task(run_scheduler(_send_scheduled_message))
+        logger.info("Cron scheduler started")
+
+    app.post_init = _post_init
 
     logger.info("Bot started — listening for messages from owner %s", owner_id)
     app.run_polling()

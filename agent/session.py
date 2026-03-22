@@ -10,6 +10,10 @@ CONVERSATIONS_DIR = Path(__file__).resolve().parent.parent / "conversations"
 _sessions: dict[str, list[dict]] = {}
 _session_files: dict[str, Path] = {}
 
+# Tracks the session_id of the currently running agent turn.
+# Skills can read this to bind actions to the active session.
+current_session_id: str = "cli"
+
 
 def get_conversation(session_id: str) -> list[dict]:
     """Get or create conversation history for a session."""
