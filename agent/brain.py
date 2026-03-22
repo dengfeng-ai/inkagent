@@ -6,6 +6,7 @@ import os
 from agent import registry, memory
 from agent.config import MAX_REPLY_TOKENS
 from agent.prompts import SYSTEM_PROMPT
+from agent.skill_loader import load_skills, build_skill_prompt
 import agent.session as _session
 from agent.session import get_conversation, save_conversation, make_message
 from agent.compression import maybe_compress
@@ -37,7 +38,7 @@ else:
     def _get_langfuse():
         return _null_lf
 
-# Import skills so they self-register — never import skills directly here.
+# Import the skills package to trigger tool auto-registration via @register decorators.
 import skills  # noqa: F401
 
 
@@ -56,11 +57,15 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
     user_profile = memory.get_user_profile()
     long_term_memory = memory.get_long_term_memory()
     daily_logs = memory.get_daily_logs()
+    instruction_skills = load_skills()
+    skill_prompt = build_skill_prompt(instruction_skills)
+
     system = SYSTEM_PROMPT.format(
         soul=soul if soul else "",
         user_profile=user_profile if user_profile else "(no user info yet)",
         long_term_memory=long_term_memory if long_term_memory else "(no memories yet)",
         daily_logs=daily_logs if daily_logs else "(no daily logs yet)",
+        skills=skill_prompt,
     )
 
     provider = get_provider()

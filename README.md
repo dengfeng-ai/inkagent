@@ -11,7 +11,8 @@ Inspired by [OpenClaw](https://github.com/nichochar/open-claw). Built in Python.
 - **Auto memory promotion** — daily logs are curated into long-term memory overnight via a small model
 - **Semantic memory search** — daily logs indexed with sqlite-vec for vector search (requires OpenAI API key for embeddings, falls back to keyword search)
 - **Multi-provider** — supports Anthropic (Claude) and OpenAI out of the box, switchable via env var
-- **Self-registering skills** — add capabilities by dropping in a decorated Python function
+- **Self-registering tools** — add capabilities by dropping in a decorated Python function
+- **Instruction skills** — teach the agent new workflows with just a Markdown file, no code needed
 - **Scheduled tasks** — cron-based scheduler lets the agent reach out proactively (e.g. daily briefings)
 - **Two interfaces** — CLI (`main.py`) or Telegram bot (`bot.py`)
 - **Observability** — optional [Langfuse](https://langfuse.com) tracing for all LLM calls and tool executions
@@ -132,7 +133,8 @@ inkagent/
 │   ├── brain.py         # Agentic loop (provider-agnostic)
 │   ├── config.py        # Shared constants (limits, timeouts)
 │   ├── memory.py        # Markdown memory (read/write)
-│   ├── registry.py      # Skill registration
+│   ├── registry.py      # Tool registration
+│   ├── skill_loader.py  # Markdown skill loader
 │   ├── prompts.py       # Prompt templates
 │   ├── session.py       # Conversation history + persistence
 │   ├── compression.py   # Context window compression
@@ -151,7 +153,10 @@ inkagent/
 │   ├── memory_skill.py  # log_daily, recall_memory, save_memory
 │   ├── cron.py          # create_cron, list_crons, delete_cron
 │   ├── web_search.py    # web_search (Brave Search API)
-│   └── web_fetch.py     # web_fetch (page content extraction)
+│   ├── web_fetch.py     # web_fetch (page content extraction)
+│   └── instructions/    # Markdown instruction skills
+│       └── skill_name/
+│           └── SKILL.md
 └── memory/              # All memory (gitignored)
     ├── SOUL.md
     ├── USER.md
@@ -159,11 +164,11 @@ inkagent/
     └── daily/
 ```
 
-Key design: `brain.py` has zero knowledge of individual skills. Skills register via `@registry.register(...)` — adding one never touches core code.
+Key design: `brain.py` has zero knowledge of individual tools or skills. Tools register via `@registry.register(...)`, instruction skills are auto-discovered from `skills/instructions/` — adding either never touches core code.
 
-## Built-in Skills
+## Built-in Tools
 
-| Skill | Description |
+| Tool | Description |
 |-------|-------------|
 | `run_shell` | Execute shell commands (30s timeout, output capped at 3k chars) |
 | `read_file` | Read a file's text content (truncated if too large) |
@@ -181,16 +186,16 @@ Key design: `brain.py` has zero knowledge of individual skills. Skills register 
 | `web_search` | Search the web via Brave Search API — returns title, snippet, URL |
 | `web_fetch` | Fetch a URL and extract readable text content |
 
-## Adding a Skill
+## Adding a Tool
 
-Create `skills/my_skill.py`:
+Create `skills/my_tool.py`:
 
 ```python
 from agent.registry import register
 
 @register(
-    name="my_skill",
-    description="What this skill does",
+    name="my_tool",
+    description="What this tool does",
     input_schema={
         "type": "object",
         "properties": {
@@ -199,17 +204,35 @@ from agent.registry import register
         "required": ["param"],
     },
 )
-def my_skill(param: str) -> str:
+def my_tool(param: str) -> str:
     return "result"
 ```
 
 Add to `skills/__init__.py`:
 
 ```python
-from skills import my_skill  # noqa: F401
+from skills import my_tool  # noqa: F401
 ```
 
 Done. The agent picks it up automatically.
+
+## Adding an Instruction Skill
+
+Create `skills/instructions/my_skill/SKILL.md`:
+
+```yaml
+---
+name: my_skill
+description: One-line description of the workflow
+---
+
+When the user asks for X, follow these steps:
+1. Use `tool_a` to ...
+2. Use `tool_b` to ...
+3. Format the result as ...
+```
+
+No Python, no imports. The agent sees the skill name and description in its system prompt, and loads the full instructions via `read_file` when needed.
 
 ## Configuration
 
@@ -231,16 +254,17 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 
 ## Roadmap
 
-- [x] CLI + shell skill + Markdown memory
+- [x] CLI + shell tool + Markdown memory
 - [x] Langfuse observability
 - [x] Telegram bot interface
 - [x] Long-term memory + daily logs + auto-promotion
-- [x] File operation skills (read, write, edit, list)
-- [x] Scheduled tasks (cron scheduler + skills)
-- [x] Web search + page fetch skills
+- [x] File operation tools (read, write, edit, list)
+- [x] Scheduled tasks (cron scheduler + tools)
+- [x] Web search + page fetch tools
 - [x] Semantic memory search (sqlite-vec + OpenAI embeddings, graceful degradation)
+- [x] Instruction skills — Markdown-based workflow definitions, separated from tools
 - [ ] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
-- [ ] Gmail / Google Calendar skills
+- [ ] Gmail / Google Calendar tools
 
 ## License
 

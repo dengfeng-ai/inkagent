@@ -1,7 +1,7 @@
-"""Skill registration system.
+"""Tool registration system.
 
-Skills register themselves via the @register decorator.
-brain.py reads registered tools without knowing individual skills.
+Tools register themselves via the @register decorator.
+brain.py reads registered tools without knowing individual tool implementations.
 """
 
 from typing import Any, Callable

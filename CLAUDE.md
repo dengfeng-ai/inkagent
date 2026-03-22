@@ -13,7 +13,8 @@ inkagent/
 │   ├── brain.py         # LLM agentic loop (tool_use) — provider-agnostic
 │   ├── config.py        # Shared constants (token limits, timeouts, caps)
 │   ├── memory.py        # Markdown-based memory (read/write)
-│   ├── registry.py      # Skill registration system
+│   ├── registry.py      # Tool registration system (Python tools)
+│   ├── skill_loader.py  # Markdown skill loader (instruction skills)
 │   ├── prompts.py       # Prompt templates (system, promotion, summary)
 │   ├── session.py       # Conversation history management + JSON persistence
 │   ├── compression.py   # Context window estimation + small-model summarization
@@ -27,14 +28,17 @@ inkagent/
 │       ├── anthropic.py # Anthropic (Claude) provider
 │       └── openai.py    # OpenAI provider
 ├── skills/
-│   ├── __init__.py      # Auto-imports all skills
-│   ├── shell.py         # run_shell skill
-│   ├── files.py         # read_file, write_file, edit_file, list_directory skills (write/edit block .db files)
-│   ├── profile.py       # update_soul + update_user_profile skills
-│   ├── memory_skill.py  # recall_memory, log_daily, save_memory skills
-│   ├── cron.py          # create_cron, list_crons, delete_cron skills
-│   ├── web_search.py    # web_search skill (Brave Search API)
-│   └── web_fetch.py     # web_fetch skill (HTTP + trafilatura)
+│   ├── __init__.py      # Auto-imports all tool skills
+│   ├── shell.py         # run_shell tool
+│   ├── files.py         # read_file, write_file, edit_file, list_directory tools (write/edit block .db files)
+│   ├── profile.py       # update_soul + update_user_profile tools
+│   ├── memory_skill.py  # recall_memory, log_daily, save_memory tools
+│   ├── cron.py          # create_cron, list_crons, delete_cron tools
+│   ├── web_search.py    # web_search tool (Brave Search API)
+│   ├── web_fetch.py     # web_fetch tool (HTTP + trafilatura)
+│   └── instructions/    # Markdown instruction skills (no code needed)
+│       └── skill_name/  # One directory per skill
+│           └── SKILL.md # YAML frontmatter + Markdown body
 └── memory/
     ├── SOUL.md          # Agent persona (name, tone, behavior rules)
     ├── USER.md          # User personal info (name, role, interests)
@@ -43,8 +47,9 @@ inkagent/
         └── YYYY-MM-DD.md
 ```
 
-Key design principle: `brain.py` has zero knowledge of individual skills.
-Skills register themselves via `@registry.register(...)` — adding a skill never touches core code.
+Key design principle: `brain.py` has zero knowledge of individual tools or skills.
+Tools register themselves via `@registry.register(...)` — adding a tool never touches core code.
+Instruction skills are auto-discovered from `skills/instructions/` — adding a skill is just creating a Markdown file.
 
 ## Tech Stack
 
@@ -55,6 +60,7 @@ Skills register themselves via `@registry.register(...)` — adding a skill neve
 - `python-telegram-bot` — Telegram bot interface (`bot.py`)
 - `httpx` — HTTP client for web search and fetch
 - `trafilatura` — HTML content extraction for `web_fetch`
+- `PyYAML` — YAML frontmatter parsing for instruction skills
 - `croniter` — Cron expression parsing for scheduled tasks
 - `langfuse` — Optional observability tracing for LLM calls and tool executions
 
@@ -85,7 +91,7 @@ cat memory/USER.md
 | `LLM_PROVIDER` | `anthropic` | `anthropic` or `openai` |
 | `LLM_MODEL` | per-provider | Main model (e.g. `claude-sonnet-4-20250514`, `gpt-4o`) |
 | `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (e.g. `claude-haiku-4-5-20251001`, `gpt-4o-mini`) |
-| `BRAVE_API_KEY` | — | Brave Search API key (required for `web_search` skill) |
+| `BRAVE_API_KEY` | — | Brave Search API key (required for `web_search` tool) |
 
 ## Memory System
 
@@ -111,7 +117,7 @@ The `memory/` directory is gitignored — never commit it.
 - The scheduler runs as an asyncio background task, checking every 60 seconds
 - When a job fires, it calls `run_agent(prompt, session_id)` and delivers the reply via a callback
 - In Telegram bot mode (`bot.py`), the scheduler starts automatically and sends replies to the bound chat
-- In CLI mode, the scheduler does not run (no persistent event loop), but cron skills still work — jobs created in CLI take effect when the bot starts
+- In CLI mode, the scheduler does not run (no persistent event loop), but cron tools still work — jobs created in CLI take effect when the bot starts
 - Jobs are bound to a `session_id` (e.g. `tg_123456`) at creation time via `session.current_session_id`
 - **Timezone-aware**: each job stores an IANA timezone (default: `Asia/Shanghai`). Cron expressions are interpreted in the job's timezone, so "0 9 * * *" means 9 AM local time
 - Uses `croniter` for cron expression parsing, no heavy scheduler framework
@@ -128,18 +134,20 @@ Implementation: `session.reset_conversation()` for `/new`, `compression.force_co
 
 ## Skill System
 
-Each skill is a Python function decorated with `@registry.register(...)`.
+Two types of skills, separated by design:
+
+### Tools (Python functions)
+
+Each tool is a Python function decorated with `@registry.register(...)`.
 The decorator takes `name`, `description`, and `input_schema` (JSON Schema format for Claude tool_use).
 
-To add a new skill:
-1. Create `skills/your_skill.py`
-2. Import `registry` from `agent.registry`
-3. Decorate your function with `@registry.register(...)`
-4. Add `from skills import your_skill` in `skills/__init__.py`
+To add a new tool:
+1. Create `skills/your_tool.py`
+2. Import `register` from `agent.registry`
+3. Decorate your function with `@register(...)`
+4. Add `from skills import your_tool` in `skills/__init__.py`
 
-That's it. `brain.py` picks it up automatically.
-
-Built-in skills:
+Built-in tools:
 - `run_shell` — executes shell commands, 30s timeout, output capped at 3000 chars
 - `update_soul` — rewrites `memory/SOUL.md` with agent persona settings
 - `update_user_profile` — rewrites `memory/USER.md` with user personal info
@@ -156,10 +164,32 @@ Built-in skills:
 - `web_search` — searches the web via Brave Search API, returns title + snippet + URL list
 - `web_fetch` — fetches a URL and extracts readable text content via `trafilatura`
 
+### Instruction Skills (Markdown files)
+
+Instruction skills are pure Markdown files in `skills/instructions/` that teach the LLM workflows without writing Python code. They guide the LLM on *when and how* to combine existing tools for specific tasks.
+
+File format — YAML frontmatter + Markdown body:
+```yaml
+---
+name: skill_name
+description: One-line description shown in the system prompt
+requires:            # optional eligibility gating
+  env: [API_KEY]     # skip if env var missing
+  bins: [ffmpeg]     # skip if binary not on PATH
+---
+
+Instructions for the LLM describing the workflow…
+```
+
+To add a new instruction skill: create a directory in `skills/instructions/` with a `SKILL.md` file (e.g. `skills/instructions/daily_report/SKILL.md`). No Python, no imports. The skill loader (`agent/skill_loader.py`) discovers it automatically.
+
+- Only skill meta (name, description, path) is injected into the system prompt — the LLM uses `read_file` to load full instructions on demand
+- Skills with unmet `requires` are silently skipped
+
 ## Agentic Loop
 
 `brain.py` runs a provider-agnostic tool_use loop:
-1. Build system prompt (instructions + SOUL.md + USER.md + MEMORY.md + daily logs) + conversation messages
+1. Build system prompt (instructions + SOUL.md + USER.md + MEMORY.md + daily logs + instruction skills) + conversation messages
 2. Call LLM via `provider.complete()` with all registered tools (auto-formatted per provider)
 3. If `stop_reason == "tool_use"`: execute tools, append results via `provider.tool_results_messages()`, loop
 4. If `stop_reason == "end_turn"`: extract text, append to in-memory conversation, return
@@ -182,13 +212,13 @@ IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — alway
 - Type hints on all function signatures
 - No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, `scheduler.py`, `vector_store.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
 - Cap tool output at `TOOL_OUTPUT_CAP` chars (see `agent/config.py`) before returning to avoid context explosion
-- IMPORTANT: Never import skills directly in `brain.py` — always go through `registry`
+- IMPORTANT: Never import individual tool modules in `brain.py` — only import the `skills` package which auto-registers all tools
 - IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — always go through `providers`
 
 ## Roadmap (in order)
 
-1. ~~CLI + shell skill + Markdown memory~~ (Phase 1)
+1. ~~CLI + shell tool + Markdown memory~~ (Phase 1)
 2. ~~Telegram bot interface~~ — `bot.py`, owner-only, typing indicator
-3. ~~Scheduled tasks~~ — cron scheduler (`croniter` + asyncio), `create_cron` / `list_crons` / `delete_cron` skills
-4. ~~Web search skill~~ — `web_search` (Brave) + `web_fetch` (trafilatura)
-5. Gmail / Google Calendar skills
+3. ~~Scheduled tasks~~ — cron scheduler (`croniter` + asyncio), `create_cron` / `list_crons` / `delete_cron` tools
+4. ~~Web search tool~~ — `web_search` (Brave) + `web_fetch` (trafilatura)
+5. Gmail / Google Calendar tools
