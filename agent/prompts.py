@@ -18,6 +18,8 @@ Do NOT read or modify vectors.db — it is an internal database managed automati
 </instructions>
 
 <context>
+Current date: {current_date}
+
 <user-profile>
 {user_profile}
 </user-profile>

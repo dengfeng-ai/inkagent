@@ -3,6 +3,8 @@
 import logging
 import os
 
+from datetime import date
+
 from agent import registry, memory
 from agent.config import MAX_REPLY_TOKENS
 from agent.prompts import SYSTEM_PROMPT
@@ -61,6 +63,7 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
     skill_prompt = build_skill_prompt(instruction_skills)
 
     system = SYSTEM_PROMPT.format(
+        current_date=date.today().isoformat(),
         soul=soul if soul else "",
         user_profile=user_profile if user_profile else "(no user info yet)",
         long_term_memory=long_term_memory if long_term_memory else "(no memories yet)",
