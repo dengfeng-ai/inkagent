@@ -129,6 +129,7 @@ inkagent/
 │   ├── compression.py   # Context window compression
 │   ├── promotion.py     # Daily log → long-term memory promotion
 │   ├── scheduler.py     # Cron scheduler (asyncio + croniter)
+│   ├── telegram_format.py # Markdown → Telegram HTML converter
 │   └── providers/       # Pluggable LLM providers
 │       ├── base.py      # LLMProvider ABC + shared types
 │       ├── anthropic.py # Anthropic (Claude)

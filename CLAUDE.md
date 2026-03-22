@@ -19,6 +19,7 @@ inkagent/
 │   ├── compression.py   # Context window estimation + small-model summarization
 │   ├── promotion.py     # Daily log → MEMORY.md promotion via LLM
 │   ├── scheduler.py     # Cron scheduler (asyncio loop + croniter)
+│   ├── telegram_format.py # Markdown → Telegram HTML converter
 │   └── providers/       # Pluggable LLM provider abstraction
 │       ├── __init__.py  # Factory: get_provider(), get_model(), get_small_model()
 │       ├── base.py      # LLMProvider ABC + LLMResponse/ToolCall/LLMError types
@@ -53,6 +54,7 @@ Skills register themselves via `@registry.register(...)` — adding a skill neve
 - `httpx` — HTTP client for web search and fetch
 - `trafilatura` — HTML content extraction for `web_fetch`
 - `croniter` — Cron expression parsing for scheduled tasks
+- `langfuse` — Optional observability tracing for LLM calls and tool executions
 
 ## Common Commands
 
