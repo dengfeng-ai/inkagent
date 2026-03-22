@@ -43,6 +43,19 @@ def save_conversation(session_id: str) -> None:
     )
 
 
+def reset_conversation(session_id: str) -> int:
+    """Save current conversation, clear it, and start fresh.
+
+    Returns the number of messages that were archived.
+    """
+    count = len(_sessions.get(session_id, []))
+    if count:
+        save_conversation(session_id)
+        _session_files.pop(session_id, None)
+    _sessions[session_id] = []
+    return count
+
+
 def inject_message(session_id: str, role: str, content: str) -> None:
     """Inject a message into a session's conversation history and persist it.
 

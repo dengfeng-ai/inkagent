@@ -14,7 +14,9 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 from agent.brain import run_agent  # noqa: E402
+from agent.compression import force_compress  # noqa: E402
 from agent.providers import LLMError  # noqa: E402
+from agent.session import get_conversation, reset_conversation, save_conversation  # noqa: E402
 
 
 def main() -> None:
@@ -39,6 +41,21 @@ def main() -> None:
         if user_input.lower() in ("quit", "exit"):
             print("bye!")
             break
+
+        # Session control commands — handled locally, not sent to the LLM.
+        if user_input.lower() == "/new":
+            count = reset_conversation("cli")
+            print(f"\nNew session started. ({count} messages archived)\n")
+            continue
+        if user_input.lower() == "/compact":
+            conversation = get_conversation("cli")
+            if len(conversation) <= 1:
+                print("\nNothing to compact.\n")
+                continue
+            before, after = force_compress(conversation)
+            save_conversation("cli")
+            print(f"\nCompacted: {before} messages → {after}\n")
+            continue
 
         try:
             response = run_agent(user_input)

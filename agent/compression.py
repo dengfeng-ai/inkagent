@@ -65,6 +65,41 @@ def _summarize_messages(messages: list[dict]) -> str:
         return f"[Summary unavailable — earlier conversation context was dropped]\n{text[:500]}"
 
 
+def force_compress(conversation: list[dict]) -> tuple[int, int]:
+    """Force-compress conversation regardless of token threshold.
+
+    Returns (before_count, after_count).
+    """
+    before = len(conversation)
+    if before <= KEEP_RECENT_MESSAGES:
+        return before, before
+
+    split_idx = before - KEEP_RECENT_MESSAGES
+    if split_idx > 0 and conversation[split_idx].get("role") != "user":
+        split_idx -= 1
+    if split_idx <= 0:
+        return before, before
+
+    old_messages = conversation[:split_idx]
+    kept_messages = conversation[split_idx:]
+
+    summary = _summarize_messages(old_messages)
+
+    conversation.clear()
+    conversation.append(make_message(
+        "user",
+        f"[Summary of previous conversation]\n{summary}",
+    ))
+    conversation.append(make_message(
+        "assistant",
+        "Got it, I have the context from our earlier conversation.",
+    ))
+    conversation.extend(kept_messages)
+
+    logger.info("Force-compressed: %d messages → %d", before, len(conversation))
+    return before, len(conversation)
+
+
 def maybe_compress(conversation: list[dict], system: str, tools: list[dict]) -> None:
     """Compress conversation history if approaching context window limit.
 

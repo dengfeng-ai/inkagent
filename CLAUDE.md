@@ -109,6 +109,16 @@ The `memory/` directory is gitignored — never commit it.
 - **Timezone-aware**: each job stores an IANA timezone (default: `Asia/Shanghai`). Cron expressions are interpreted in the job's timezone, so "0 9 * * *" means 9 AM local time
 - Uses `croniter` for cron expression parsing, no heavy scheduler framework
 
+## Session Control Commands
+
+User-facing commands handled locally (not sent to the LLM):
+
+- `/new` — archive current conversation and start a fresh session
+- `/compact` — force-compress conversation history (summarize old messages, keep recent ones)
+
+In Telegram, these are native bot commands (`CommandHandler`). In CLI, they are intercepted in the input loop.
+Implementation: `session.reset_conversation()` for `/new`, `compression.force_compress()` for `/compact`.
+
 ## Skill System
 
 Each skill is a Python function decorated with `@registry.register(...)`.

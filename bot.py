@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from telegram import Update  # noqa: E402
+from telegram import BotCommand, Update  # noqa: E402
 from telegram.constants import ChatAction  # noqa: E402
 from telegram.ext import (  # noqa: E402
     ApplicationBuilder,
@@ -18,8 +18,10 @@ from telegram.ext import (  # noqa: E402
 )
 
 from agent.brain import run_agent  # noqa: E402
+from agent.compression import force_compress  # noqa: E402
 from agent.providers import LLMError  # noqa: E402
 from agent.scheduler import run_scheduler  # noqa: E402
+from agent.session import get_conversation, reset_conversation, save_conversation  # noqa: E402
 from agent.telegram_format import markdown_to_telegram_html  # noqa: E402
 
 logging.basicConfig(
@@ -57,6 +59,29 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not _is_owner(update, _get_owner_id()):
         return
     await update.message.reply_text("inkagent is online.")
+
+
+async def new_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /new — reset conversation and start fresh."""
+    if not _is_owner(update, _get_owner_id()):
+        return
+    session_id = f"tg_{update.effective_chat.id}"
+    count = reset_conversation(session_id)
+    await update.message.reply_text(f"New session started. ({count} messages archived)")
+
+
+async def compact_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /compact — force-compress conversation history."""
+    if not _is_owner(update, _get_owner_id()):
+        return
+    session_id = f"tg_{update.effective_chat.id}"
+    conversation = get_conversation(session_id)
+    if len(conversation) <= 1:
+        await update.message.reply_text("Nothing to compact.")
+        return
+    before, after = await asyncio.to_thread(force_compress, conversation)
+    save_conversation(session_id)
+    await update.message.reply_text(f"Compacted: {before} messages → {after}")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -101,6 +126,8 @@ def main() -> None:
 
     app = ApplicationBuilder().token(bot_token).build()
     app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("new", new_command))
+    app.add_handler(CommandHandler("compact", compact_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # --- Scheduler integration ---
@@ -115,7 +142,11 @@ def main() -> None:
             await app.bot.send_message(chat_id=chat_id, text=html[i:i + MAX_MSG_LEN], parse_mode="HTML")
 
     async def _post_init(_app) -> None:
-        """Start the cron scheduler after the bot is fully initialized."""
+        """Set bot command menu and start the cron scheduler."""
+        await _app.bot.set_my_commands([
+            BotCommand("new", "Start a new conversation"),
+            BotCommand("compact", "Compress conversation history"),
+        ])
         asyncio.create_task(run_scheduler(_send_scheduled_message))
         logger.info("Cron scheduler started")
 
