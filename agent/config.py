@@ -14,3 +14,8 @@ TOOL_OUTPUT_CAP = 3000  # max chars returned from a tool call
 
 # Shell skill
 SHELL_TIMEOUT = 30  # seconds
+
+# Web search / fetch
+WEB_SEARCH_COUNT = 5  # number of search results to return
+WEB_FETCH_TIMEOUT = 15  # seconds
+WEB_FETCH_MAX_CHARS = 20_000  # max chars extracted from a page (before TOOL_OUTPUT_CAP)

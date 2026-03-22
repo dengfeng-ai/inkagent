@@ -4,9 +4,12 @@ import asyncio
 import logging
 import os
 
-from telegram import Update
-from telegram.constants import ChatAction
-from telegram.ext import (
+from dotenv import load_dotenv
+load_dotenv()
+
+from telegram import Update  # noqa: E402
+from telegram.constants import ChatAction  # noqa: E402
+from telegram.ext import (  # noqa: E402
     ApplicationBuilder,
     CommandHandler,
     MessageHandler,
@@ -14,8 +17,8 @@ from telegram.ext import (
     filters,
 )
 
-from agent.brain import run_agent
-from agent.providers import LLMError
+from agent.brain import run_agent  # noqa: E402
+from agent.providers import LLMError  # noqa: E402
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -83,9 +86,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 def main() -> None:
-    from dotenv import load_dotenv
-    load_dotenv()
-
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not bot_token:
         raise SystemExit("Error: TELEGRAM_BOT_TOKEN is not set. Check your .env file.")
