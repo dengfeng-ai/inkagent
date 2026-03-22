@@ -36,6 +36,7 @@ inkagent/
 │   ├── cron.py          # create_cron, list_crons, delete_cron tools
 │   ├── web_search.py    # web_search tool (Brave Search API)
 │   ├── web_fetch.py     # web_fetch tool (HTTP + trafilatura)
+│   ├── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
 │   └── instructions/    # Markdown instruction skills (no code needed)
 │       └── skill_name/  # One directory per skill
 │           └── SKILL.md # YAML frontmatter + Markdown body
@@ -92,6 +93,8 @@ cat memory/USER.md
 | `LLM_MODEL` | per-provider | Main model (e.g. `claude-sonnet-4-20250514`, `gpt-4o`) |
 | `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (e.g. `claude-haiku-4-5-20251001`, `gpt-4o-mini`) |
 | `BRAVE_API_KEY` | — | Brave Search API key (required for `web_search` tool) |
+| `GMAIL_ADDRESS` | — | Gmail address (required for Gmail tools) |
+| `GMAIL_APP_PASSWORD` | — | Gmail App Password (required for Gmail tools, generate at myaccount.google.com/apppasswords) |
 
 ## Memory System
 
@@ -163,6 +166,10 @@ Built-in tools:
 - `delete_cron` — deletes a scheduled task by ID
 - `web_search` — searches the web via Brave Search API, returns title + snippet + URL list
 - `web_fetch` — fetches a URL and extracts readable text content via `trafilatura`
+- `gmail_search` — searches Gmail via IMAP, returns sender/subject/date list (IMAP search syntax)
+- `gmail_read` — reads full email content by UID (includes attachments list, Message-ID for replies)
+- `gmail_send` — sends or replies to email via SMTP (supports In-Reply-To threading)
+- `gmail_mark_read` — marks one or more emails as read by UID (batch support)
 
 ### Instruction Skills (Markdown files)
 
@@ -221,4 +228,4 @@ IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — alway
 2. ~~Telegram bot interface~~ — `bot.py`, owner-only, typing indicator
 3. ~~Scheduled tasks~~ — cron scheduler (`croniter` + asyncio), `create_cron` / `list_crons` / `delete_cron` tools
 4. ~~Web search tool~~ — `web_search` (Brave) + `web_fetch` (trafilatura)
-5. Gmail / Google Calendar tools
+5. ~~Gmail~~ — `gmail_search`, `gmail_read`, `gmail_send` tools (IMAP/SMTP + App Password)

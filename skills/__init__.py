@@ -7,3 +7,4 @@ from skills import web_search  # noqa: F401
 from skills import web_fetch  # noqa: F401
 from skills import files  # noqa: F401
 from skills import cron  # noqa: F401
+from skills import gmail  # noqa: F401

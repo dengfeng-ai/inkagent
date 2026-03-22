@@ -154,6 +154,7 @@ inkagent/
 │   ├── cron.py          # create_cron, list_crons, delete_cron
 │   ├── web_search.py    # web_search (Brave Search API)
 │   ├── web_fetch.py     # web_fetch (page content extraction)
+│   ├── gmail.py         # gmail_search, gmail_read, gmail_send, gmail_mark_read
 │   └── instructions/    # Markdown instruction skills
 │       └── skill_name/
 │           └── SKILL.md
@@ -185,6 +186,10 @@ Key design: `brain.py` has zero knowledge of individual tools or skills. Tools r
 | `recall_memory` | Search daily logs (semantic when available, keyword fallback) |
 | `web_search` | Search the web via Brave Search API — returns title, snippet, URL |
 | `web_fetch` | Fetch a URL and extract readable text content |
+| `gmail_search` | Search Gmail via IMAP (supports Gmail search syntax) |
+| `gmail_read` | Read full email content by UID |
+| `gmail_send` | Send or reply to email via SMTP |
+| `gmail_mark_read` | Mark emails as read by UID (batch support) |
 
 ## Adding a Tool
 
@@ -246,6 +251,8 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 | `LLM_MODEL` | No | Main model (default: `claude-sonnet-4-20250514` / `gpt-4o`) |
 | `LLM_SMALL_MODEL` | No | Cheap model for compression/promotion (default: `claude-haiku-4-5-20251001` / `gpt-4o-mini`) |
 | `BRAVE_API_KEY` | For web search | [Brave Search API](https://brave.com/search/api/) key (free: 2000 queries/mo) |
+| `GMAIL_ADDRESS` | For Gmail | Gmail address |
+| `GMAIL_APP_PASSWORD` | For Gmail | [App Password](https://myaccount.google.com/apppasswords) (requires 2-Step Verification) |
 | `TELEGRAM_BOT_TOKEN` | For bot | Telegram bot token from @BotFather |
 | `TELEGRAM_OWNER_ID` | For bot | Your numeric Telegram user ID |
 | `LANGFUSE_PUBLIC_KEY` | No | Langfuse observability |
@@ -263,8 +270,9 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 - [x] Web search + page fetch tools
 - [x] Semantic memory search (sqlite-vec + OpenAI embeddings, graceful degradation)
 - [x] Instruction skills — Markdown-based workflow definitions, separated from tools
+- [x] Gmail tools (IMAP/SMTP + App Password)
 - [ ] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
-- [ ] Gmail / Google Calendar tools
+
 
 ## License
 
