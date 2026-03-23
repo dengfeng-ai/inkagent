@@ -2,6 +2,7 @@
 
 # LLM generation
 MAX_REPLY_TOKENS = 4096  # max tokens per LLM response
+MAX_TOOL_ROUNDS = 10  # max tool-use loop iterations per agent turn
 
 # Context window management
 MAX_CONTEXT_TOKENS = 200_000

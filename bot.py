@@ -113,6 +113,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await _send_long_message(update, reply)
 
 
+async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle errors in the telegram bot — log and continue instead of crashing."""
+    logger.error("Exception while handling an update: %s", context.error)
+
+
 def main() -> None:
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not bot_token:
@@ -129,6 +134,7 @@ def main() -> None:
     app.add_handler(CommandHandler("new", new_command))
     app.add_handler(CommandHandler("compact", compact_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_error_handler(_error_handler)
 
     # --- Scheduler integration ---
     async def _send_scheduled_message(session_id: str, text: str) -> None:
