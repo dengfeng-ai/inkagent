@@ -45,7 +45,8 @@ def main() -> None:
         # Session control commands — handled locally, not sent to the LLM.
         if user_input.lower() == "/new":
             count = reset_conversation("cli")
-            print(f"\nNew session started. ({count} messages archived)\n")
+            from agent.providers import get_model
+            print(f"\nNew session started. Model: {get_model()}\n")
             continue
         if user_input.lower() == "/compact":
             conversation = get_conversation("cli")

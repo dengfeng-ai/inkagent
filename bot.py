@@ -67,7 +67,8 @@ async def new_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
     session_id = f"tg_{update.effective_chat.id}"
     count = reset_conversation(session_id)
-    await update.message.reply_text(f"New session started. ({count} messages archived)")
+    from agent.providers import get_model
+    await update.message.reply_text(f"New session started. Model: {get_model()}")
 
 
 async def compact_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
