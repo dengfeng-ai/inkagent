@@ -118,12 +118,23 @@ The `memory/` directory is gitignored — never commit it.
 `agent/scheduler.py` provides a cron-based task scheduler. Jobs are persisted in `memory/crons.json`.
 
 - The scheduler runs as an asyncio background task, checking every 60 seconds
-- When a job fires, it calls `run_agent(prompt, session_id)` and delivers the reply via a callback
+- When a job fires, it calls `run_agent(prompt, session_id)` with a fresh session (timestamped session ID) and delivers the reply via a callback
 - In Telegram bot mode (`bot.py`), the scheduler starts automatically and sends replies to the bound chat
 - In CLI mode, the scheduler does not run (no persistent event loop), but cron tools still work — jobs created in CLI take effect when the bot starts
 - Jobs are bound to a `session_id` (e.g. `tg_123456`) at creation time via `session.current_session_id`
 - **Timezone-aware**: each job stores an IANA timezone (default: `Asia/Shanghai`). Cron expressions are interpreted in the job's timezone, so "0 9 * * *" means 9 AM local time
 - Uses `croniter` for cron expression parsing, no heavy scheduler framework
+- **Heartbeat mode**: Jobs with `silent_ok: true` suppress notification when the agent replies with exactly `HEARTBEAT_OK`. This enables periodic checks that only notify when something needs attention.
+
+### Heartbeat
+
+Heartbeat is a special use of the cron system for periodic background checks (email, calendar, etc.) that only notify the user when something needs attention. Implemented as:
+
+- **`memory/HEARTBEAT.md`** — User-editable checklist of things to check periodically
+- **`skills/instructions/heartbeat/SKILL.md`** — Instruction skill teaching the agent the heartbeat workflow
+- **`silent_ok` flag on cron jobs** — When set, replies of `HEARTBEAT_OK` are swallowed silently
+
+Setup: create a cron job with `silent_ok=true` whose prompt tells the agent to run the heartbeat skill. The agent reads the checklist, runs the checks, and either reports findings or replies `HEARTBEAT_OK` to stay silent.
 
 ## Session Control Commands
 
@@ -161,7 +172,7 @@ Built-in tools:
 - `write_file` — writes content to a file, creating parent directories as needed
 - `edit_file` — replaces an exact unique string match in a file (search-and-replace)
 - `list_directory` — lists files and subdirectories at a given path
-- `create_cron` — creates a scheduled task with a cron expression + prompt; binds to the current session
+- `create_cron` — creates a scheduled task with a cron expression + prompt; binds to the current session. Supports `silent_ok` flag for heartbeat-style jobs (suppresses notification when agent replies `HEARTBEAT_OK`)
 - `list_crons` — lists all scheduled tasks
 - `delete_cron` — deletes a scheduled task by ID
 - `web_search` — searches the web via Brave Search API, returns title + snippet + URL list

@@ -12,7 +12,9 @@ from agent.scheduler import DEFAULT_TIMEZONE, add_job, remove_job, list_jobs
         "The prompt will be sent to the agent at each trigger time, "
         "and the reply delivered to the current chat session. "
         "Cron format: minute hour day month weekday (e.g. '0 9 * * *' = daily at 9 AM). "
-        "Times are interpreted in the user's timezone (default: Asia/Shanghai)."
+        "Times are interpreted in the user's timezone (default: Asia/Shanghai). "
+        "Set silent_ok=true for heartbeat-style jobs — if the agent replies "
+        "with only HEARTBEAT_OK, no message is sent to the user."
     ),
     input_schema={
         "type": "object",
@@ -33,16 +35,21 @@ from agent.scheduler import DEFAULT_TIMEZONE, add_job, remove_job, list_jobs
                 "type": "string",
                 "description": "IANA timezone (e.g. 'Asia/Shanghai', 'America/New_York'). Default: Asia/Shanghai",
             },
+            "silent_ok": {
+                "type": "boolean",
+                "description": "If true, suppress notification when the agent replies with HEARTBEAT_OK (for heartbeat jobs). Default: false",
+            },
         },
         "required": ["id", "cron", "prompt"],
     },
 )
-def create_cron(id: str, cron: str, prompt: str, timezone: str = DEFAULT_TIMEZONE) -> str:
+def create_cron(id: str, cron: str, prompt: str, timezone: str = DEFAULT_TIMEZONE, silent_ok: bool = False) -> str:
     try:
         session_id = _session.current_session_id
-        job = add_job(job_id=id, cron_expr=cron, prompt=prompt, session_id=session_id, tz=timezone)
+        job = add_job(job_id=id, cron_expr=cron, prompt=prompt, session_id=session_id, tz=timezone, silent_ok=silent_ok)
+        mode = " (heartbeat mode)" if job.get("silent_ok") else ""
         return (
-            f"Created scheduled task '{job['id']}'.\n"
+            f"Created scheduled task '{job['id']}'{mode}.\n"
             f"Schedule: {job['cron']} ({job['timezone']})\n"
             f"Prompt: {job['prompt']}\n"
             f"Session: {job['session_id']}"
@@ -67,6 +74,8 @@ def list_crons() -> str:
     lines = []
     for j in jobs:
         status = "enabled" if j.get("enabled", True) else "disabled"
+        if j.get("silent_ok"):
+            status += ", heartbeat"
         tz = j.get("timezone", "UTC")
         lines.append(
             f"- **{j['id']}** [{status}]\n"

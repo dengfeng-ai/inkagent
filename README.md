@@ -13,7 +13,8 @@ Inspired by [OpenClaw](https://github.com/nichochar/open-claw). Built in Python.
 - **Multi-provider** — supports Anthropic (Claude) and OpenAI out of the box, switchable via env var
 - **Self-registering tools** — add capabilities by dropping in a decorated Python function
 - **Instruction skills** — teach the agent new workflows with just a Markdown file, no code needed
-- **Scheduled tasks** — cron-based scheduler lets the agent reach out proactively (e.g. daily briefings)
+- **Scheduled tasks** — cron-based scheduler lets the agent reach out proactively (e.g. daily briefings), each firing gets a fresh session
+- **Heartbeat** — periodic background checks (email, calendar, etc.) via `HEARTBEAT.md` checklist, only notifies when something needs attention
 - **Two interfaces** — CLI (`main.py`) or Telegram bot (`bot.py`)
 - **Observability** — optional [Langfuse](https://langfuse.com) tracing for all LLM calls and tool executions
 
@@ -271,7 +272,7 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 - [x] Semantic memory search (sqlite-vec + OpenAI embeddings, graceful degradation)
 - [x] Instruction skills — Markdown-based workflow definitions, separated from tools
 - [x] Gmail tools (IMAP/SMTP + App Password)
-- [ ] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
+- [x] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
 
 
 ## License

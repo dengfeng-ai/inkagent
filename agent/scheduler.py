@@ -42,14 +42,22 @@ def _save_jobs() -> None:
         json.dump(_jobs, f, indent=2, ensure_ascii=False)
 
 
+HEARTBEAT_OK = "HEARTBEAT_OK"
+
+
 def add_job(
     job_id: str,
     cron_expr: str,
     prompt: str,
     session_id: str,
     tz: str = DEFAULT_TIMEZONE,
+    silent_ok: bool = False,
 ) -> dict[str, Any]:
-    """Add a new cron job. Returns the created job dict."""
+    """Add a new cron job. Returns the created job dict.
+
+    If silent_ok is True, the callback is skipped when the agent reply
+    contains only HEARTBEAT_OK (used for heartbeat-style jobs).
+    """
     _load_jobs()
 
     # Validate cron expression.
@@ -73,6 +81,7 @@ def add_job(
         "session_id": session_id,
         "timezone": tz,
         "enabled": True,
+        "silent_ok": silent_ok,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     _jobs.append(job)
@@ -141,24 +150,36 @@ async def run_scheduler(send_callback: SendCallback) -> None:
                 next_fire = cron.get_next(datetime)
                 if next_fire <= now_local:
                     logger.info("Firing cron job %s (tz=%s)", job["id"], tz)
-                    # Run in an isolated session so the user's conversation
-                    # context is not polluted with tool-use intermediate steps.
-                    cron_session_id = f"{job['session_id']}_cron_{job['id']}"
+                    # Each firing gets a fresh session — cron jobs are
+                    # independent tasks, not ongoing conversations.
+                    ts = now_utc.strftime("%Y%m%d%H%M%S")
+                    cron_session_id = f"{job['session_id']}_cron_{job['id']}_{ts}"
                     try:
                         reply = await asyncio.to_thread(
                             run_agent, job["prompt"], cron_session_id
                         )
                     except LLMError as e:
                         reply = f"[Scheduled task '{job['id']}' failed: {e}]"
-                    # Bridge the final reply into the user's main session
-                    # so follow-up questions have context.  Include a user
-                    # message to keep the conversation structure valid.
-                    inject_message(
-                        job["session_id"], "user",
-                        f"[Scheduled task '{job['id']}' triggered]",
+                    # If silent_ok and the agent says nothing important,
+                    # skip notification entirely.
+                    is_silent = (
+                        job.get("silent_ok", False)
+                        and reply.strip() == HEARTBEAT_OK
                     )
-                    inject_message(job["session_id"], "assistant", reply)
-                    await send_callback(job["session_id"], reply)
+                    if is_silent:
+                        logger.info(
+                            "Heartbeat job %s: nothing to report, staying silent",
+                            job["id"],
+                        )
+                    else:
+                        # Bridge the final reply into the user's main session
+                        # so follow-up questions have context.
+                        inject_message(
+                            job["session_id"], "user",
+                            f"[Scheduled task '{job['id']}' triggered]",
+                        )
+                        inject_message(job["session_id"], "assistant", reply)
+                        await send_callback(job["session_id"], reply)
             except Exception:
                 logger.exception("Error processing cron job %s", job["id"])
 
