@@ -1,6 +1,6 @@
 # inkagent
 
-A lightweight personal AI agent that runs locally, powered by Claude or OpenAI and driven by Markdown memory.
+A lightweight personal AI agent that runs locally, powered by Claude, OpenAI, or ChatGPT subscription (via Codex OAuth) and driven by Markdown memory.
 Inspired by OpenClaw. Built in Python.
 
 ## Architecture
@@ -22,11 +22,13 @@ inkagent/
 │   ├── scheduler.py     # Cron scheduler (asyncio loop + croniter)
 │   ├── telegram_format.py # Markdown → Telegram HTML converter
 │   ├── vector_store.py  # sqlite-vec vector store for semantic search over daily logs
+│   ├── codex_auth.py    # OAuth 2.0 + PKCE auth for OpenAI Codex (ChatGPT subscription)
 │   └── providers/       # Pluggable LLM provider abstraction
 │       ├── __init__.py  # Factory: get_provider(), get_model(), get_small_model()
 │       ├── base.py      # LLMProvider ABC + LLMResponse/ToolCall/LLMError types
 │       ├── anthropic.py # Anthropic (Claude) provider
-│       └── openai.py    # OpenAI provider
+│       ├── openai.py    # OpenAI provider
+│       └── openai_codex.py # OpenAI Codex provider (ChatGPT subscription via OAuth)
 ├── skills/
 │   ├── __init__.py      # Auto-imports all tool skills
 │   ├── shell.py         # run_shell tool
@@ -71,8 +73,12 @@ Instruction skills are auto-discovered from `skills/instructions/` — adding a 
 # Run the CLI (default: Anthropic Claude)
 python main.py
 
-# Run with OpenAI
+# Run with OpenAI API
 LLM_PROVIDER=openai LLM_MODEL=gpt-4o python main.py
+
+# Run with ChatGPT subscription (Codex OAuth — no API key needed)
+python -m agent.codex_auth              # one-time login via browser
+LLM_PROVIDER=openai-codex LLM_MODEL=codex-mini-latest python main.py
 
 # Run the Telegram bot
 python bot.py
@@ -89,7 +95,7 @@ cat memory/USER.md
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLM_PROVIDER` | `anthropic` | `anthropic` or `openai` |
+| `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `openai-codex` |
 | `LLM_MODEL` | per-provider | Main model (e.g. `claude-sonnet-4-20250514`, `gpt-4o`) |
 | `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (e.g. `claude-haiku-4-5-20251001`, `gpt-4o-mini`) |
 | `BRAVE_API_KEY` | — | Brave Search API key (required for `web_search` tool) |
@@ -225,10 +231,20 @@ No recursion limit is set — rely on the LLM's natural termination behavior.
 `brain.py` has zero knowledge of specific providers. Adding a new provider means implementing `LLMProvider` and registering it in `providers/__init__.py`.
 IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — always go through `providers`.
 
+### OpenAI Codex Provider
+
+The `openai-codex` provider allows running inkagent using a **ChatGPT Plus/Pro subscription** instead of paying for API credits. It uses OAuth 2.0 + PKCE to authenticate against OpenAI's Codex endpoint.
+
+- **Auth module**: `agent/codex_auth.py` — handles OAuth login, token storage (`~/.inkagent/codex-auth.json`), and automatic refresh
+- **API endpoint**: `https://chatgpt.com/backend-api/codex/responses` (Responses API format, not Chat Completions)
+- **Login**: `python -m agent.codex_auth` opens a browser for one-time OAuth consent
+- **No API key needed** — authentication uses the ChatGPT subscription session
+- **Limitations**: subject to ChatGPT subscription usage quotas; no embeddings (vector search still needs `OPENAI_API_KEY`)
+
 ## Code Style
 
 - Type hints on all function signatures
-- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, `scheduler.py`, `vector_store.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
+- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, `scheduler.py`, `vector_store.py`, `codex_auth.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
 - Cap tool output at `TOOL_OUTPUT_CAP` chars (see `agent/config.py`) before returning to avoid context explosion
 - IMPORTANT: Never import individual tool modules in `brain.py` — only import the `skills` package which auto-registers all tools
 - IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — always go through `providers`

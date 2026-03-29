@@ -1,7 +1,7 @@
 """LLM provider factory.
 
 Provider and model selection via environment variables:
-    LLM_PROVIDER  — "anthropic" (default) or "openai"
+    LLM_PROVIDER  — "anthropic" (default), "openai", or "openai-codex"
     LLM_MODEL     — main model name (provider-specific default if unset)
 """
 
@@ -21,6 +21,10 @@ _DEFAULTS: dict[str, dict[str, str]] = {
         "model": "gpt-4o",
         "small_model": "gpt-4o-mini",
     },
+    "openai-codex": {
+        "model": "codex-mini-latest",
+        "small_model": "codex-mini-latest",
+    },
 }
 
 _provider_instance: LLMProvider | None = None
@@ -31,7 +35,11 @@ def get_provider() -> LLMProvider:
     global _provider_instance
     if _provider_instance is None:
         name = os.environ.get("LLM_PROVIDER", "anthropic").lower()
-        if name == "openai":
+        if name == "openai-codex":
+            from agent.providers.openai_codex import OpenAICodexProvider
+
+            _provider_instance = OpenAICodexProvider()
+        elif name == "openai":
             from agent.providers.openai import OpenAIProvider
 
             _provider_instance = OpenAIProvider()
