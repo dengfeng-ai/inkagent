@@ -22,6 +22,22 @@ SOUL_PATH = os.path.join(MEMORY_DIR, "SOUL.md")
 USER_PATH = os.path.join(MEMORY_DIR, "USER.md")
 LONG_TERM_PATH = os.path.join(MEMORY_DIR, "MEMORY.md")
 
+USER_TEMPLATE = """\
+# USER.md
+
+_Update these fields as you learn about the user. Only record durable info, not session context._
+
+## Basics
+- **Name:**
+- **What to call them:**
+- **Timezone:**
+- **Role / occupation:**
+
+## Interests & preferences
+
+## Notes
+"""
+
 
 def _ensure_dir() -> None:
     os.makedirs(MEMORY_DIR, exist_ok=True)
@@ -53,8 +69,16 @@ def get_soul() -> str:
 
 
 def get_user_profile() -> str:
-    """Return the user profile content for the system prompt context area."""
-    return _read_file(USER_PATH).strip()
+    """Return the user profile content for the system prompt context area.
+
+    Seeds USER.md with a default template on first access so the LLM
+    sees the expected structure and preserves it on updates.
+    """
+    content = _read_file(USER_PATH).strip()
+    if not content:
+        _write_file(USER_PATH, USER_TEMPLATE)
+        return USER_TEMPLATE.strip()
+    return content
 
 
 def update_soul(content: str) -> str:
@@ -132,6 +156,7 @@ def recall_memory(query: str) -> str:
 
 # --- Daily log functions ---
 
+
 def _daily_log_path(d: date) -> str:
     """Return the file path for a given date's daily log."""
     return os.path.join(DAILY_DIR, f"{d.isoformat()}.md")
@@ -181,6 +206,7 @@ def append_daily_log(content: str) -> str:
 
 
 # --- Memory promotion ---
+
 
 def needs_promotion() -> bool:
     """Check if yesterday's daily log exists and hasn't been promoted yet."""

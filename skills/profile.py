@@ -25,7 +25,7 @@ def update_soul(content: str) -> str:
 
 @register(
     name="update_user_profile",
-    description="Update the user's personal profile (USER.md). Store identity info about the user: name, role, location, interests, habits. Never store transient context like current tasks or session-specific details. Pass the full updated content.",
+    description="Update the user's personal profile (USER.md). Store identity info about the user: name, role, location, interests, habits. Never store transient context like current tasks or session-specific details. IMPORTANT: read the current USER.md first, preserve its existing structure and sections, and only update the fields that changed.",
     input_schema={
         "type": "object",
         "properties": {
