@@ -33,7 +33,7 @@ inkagent/
 │   ├── __init__.py      # Auto-imports all tool skills
 │   ├── shell.py         # run_shell tool
 │   ├── files.py         # read_file, write_file, edit_file, list_directory tools (write/edit block .db files)
-│   ├── profile.py       # update_soul + update_user_profile tools
+│   ├── profile.py       # update_identity + update_soul + update_user_profile tools
 │   ├── memory_skill.py  # recall_memory, log_daily, save_memory tools
 │   ├── cron.py          # create_cron, list_crons, delete_cron tools
 │   ├── web_search.py    # web_search tool (Brave Search API)
@@ -43,7 +43,8 @@ inkagent/
 │       └── skill_name/  # One directory per skill
 │           └── SKILL.md # YAML frontmatter + Markdown body
 └── memory/
-    ├── SOUL.md          # Agent persona (name, tone, behavior rules)
+    ├── IDENTITY.md      # Agent identity metadata (name, creature, vibe, emoji, avatar)
+    ├── SOUL.md          # Agent behavioral rules (core truths, boundaries, tone, continuity)
     ├── USER.md          # User personal info (name, role, interests)
     ├── MEMORY.md        # Long-term memory (curated, durable)
     └── daily/           # Daily logs (ephemeral, append-only)
@@ -87,6 +88,7 @@ python bot.py
 pip install -r requirements.txt
 
 # View memory
+cat memory/IDENTITY.md
 cat memory/SOUL.md
 cat memory/USER.md
 ```
@@ -104,9 +106,10 @@ cat memory/USER.md
 
 ## Memory System
 
-Three-tier Markdown memory in `memory/`:
+Four-tier Markdown memory in `memory/`:
 
-- **`SOUL.md`** — Agent persona. Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (name, tone, language, style).
+- **`IDENTITY.md`** — Agent identity metadata (name, creature type, vibe, emoji, avatar). Injected into the system prompt. Updated by the LLM via `update_identity` tool when the user sets the agent's name, emoji, or avatar.
+- **`SOUL.md`** — Agent behavioral rules (core truths, boundaries, tone, continuity). Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (tone, language, boundaries).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
 - **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Writable via `save_memory` tool (for explicit "remember this" requests) and via the automatic promotion system.
 - **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). Each entry is also indexed into the vector store for semantic search.
@@ -169,7 +172,8 @@ To add a new tool:
 
 Built-in tools:
 - `run_shell` — executes shell commands, 30s timeout, output capped at 3000 chars
-- `update_soul` — rewrites `memory/SOUL.md` with agent persona settings
+- `update_identity` — rewrites `memory/IDENTITY.md` with agent identity metadata (name, creature, vibe, emoji, avatar)
+- `update_soul` — rewrites `memory/SOUL.md` with agent behavioral rules (tone, boundaries, core truths)
 - `update_user_profile` — rewrites `memory/USER.md` with user personal info
 - `recall_memory` — semantic search over daily logs (via sqlite-vec, when OpenAI embedding available); falls back to keyword search. Only searches daily logs — MEMORY.md is already in the system prompt
 - `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`); important entries are auto-promoted to MEMORY.md overnight
@@ -213,7 +217,7 @@ To add a new instruction skill: create a directory in `skills/instructions/` wit
 ## Agentic Loop
 
 `brain.py` runs a provider-agnostic tool_use loop:
-1. Build system prompt (instructions + SOUL.md + USER.md + MEMORY.md + daily logs + instruction skills) + conversation messages
+1. Build system prompt (instructions + IDENTITY.md + SOUL.md + USER.md + MEMORY.md + daily logs + instruction skills) + conversation messages
 2. Call LLM via `provider.complete()` with all registered tools (auto-formatted per provider)
 3. If `stop_reason == "tool_use"`: execute tools, append results via `provider.tool_results_messages()`, loop
 4. If `stop_reason == "end_turn"`: extract text, append to in-memory conversation, return

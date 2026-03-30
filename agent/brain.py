@@ -57,6 +57,7 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
     conversation = get_conversation(session_id)
     conversation.append(make_message("user", user_input))
 
+    identity = memory.get_identity()
     soul = memory.get_soul()
     user_profile = memory.get_user_profile()
     long_term_memory = memory.get_long_term_memory()
@@ -66,8 +67,9 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
 
     system = SYSTEM_PROMPT.format(
         current_date=date.today().isoformat(),
-        soul=soul if soul else "",
-        user_profile=user_profile if user_profile else "(no user info yet)",
+        identity=identity,
+        soul=soul,
+        user_profile=user_profile,
         long_term_memory=long_term_memory if long_term_memory else "(no memories yet)",
         daily_logs=daily_logs if daily_logs else "(no daily logs yet)",
         skills=skill_prompt,

@@ -1,7 +1,8 @@
 """Markdown-based memory system.
 
 Files:
-- SOUL.md              — agent persona (identity, tone, behavior rules)
+- IDENTITY.md          — agent identity metadata (name, creature, vibe, emoji, avatar)
+- SOUL.md              — agent behavioral rules (core truths, boundaries, tone, continuity)
 - USER.md              — user personal info (name, role, preferences)
 - MEMORY.md            — long-term memory (facts, preferences, decisions, events)
 - daily/YYYY-MM-DD.md  — daily logs (ephemeral, append-only)
@@ -18,9 +19,36 @@ PROMOTED_MARKER = "<!-- promoted -->"
 
 MEMORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "memory")
 DAILY_DIR = os.path.join(MEMORY_DIR, "daily")
+IDENTITY_PATH = os.path.join(MEMORY_DIR, "IDENTITY.md")
 SOUL_PATH = os.path.join(MEMORY_DIR, "SOUL.md")
 USER_PATH = os.path.join(MEMORY_DIR, "USER.md")
 LONG_TERM_PATH = os.path.join(MEMORY_DIR, "MEMORY.md")
+
+IDENTITY_TEMPLATE = """\
+# IDENTITY.md
+
+_Update these fields when the user sets your name, persona, or appearance._
+
+- **Name:**
+- **Creature:** (AI, robot, familiar, spirit, etc.)
+- **Vibe:** (sharp, warm, chaotic, calm, playful, etc.)
+- **Emoji:**
+- **Avatar:** (file path, URL, or data URI)
+"""
+
+SOUL_TEMPLATE = """\
+# SOUL.md
+
+_Update these sections when the user sets behavior rules, tone, or boundaries._
+
+## Core truths
+
+## Boundaries
+
+## Tone
+
+## Continuity
+"""
 
 USER_TEMPLATE = """\
 # USER.md
@@ -63,9 +91,30 @@ def _write_file(path: str, content: str) -> None:
         raise
 
 
+def get_identity() -> str:
+    """Return the agent identity metadata for the system prompt.
+
+    Seeds IDENTITY.md with a default template on first access so the LLM
+    sees the expected structure and preserves it on updates.
+    """
+    content = _read_file(IDENTITY_PATH).strip()
+    if not content:
+        _write_file(IDENTITY_PATH, IDENTITY_TEMPLATE)
+        return IDENTITY_TEMPLATE.strip()
+    return content
+
+
 def get_soul() -> str:
-    """Return the agent persona content for the system prompt instruction area."""
-    return _read_file(SOUL_PATH).strip()
+    """Return the agent behavioral rules for the system prompt.
+
+    Seeds SOUL.md with a default template on first access so the LLM
+    sees the expected structure and preserves it on updates.
+    """
+    content = _read_file(SOUL_PATH).strip()
+    if not content:
+        _write_file(SOUL_PATH, SOUL_TEMPLATE)
+        return SOUL_TEMPLATE.strip()
+    return content
 
 
 def get_user_profile() -> str:
@@ -81,10 +130,16 @@ def get_user_profile() -> str:
     return content
 
 
+def update_identity(content: str) -> str:
+    """Overwrite IDENTITY.md with new identity metadata."""
+    _write_file(IDENTITY_PATH, content)
+    return "Identity updated."
+
+
 def update_soul(content: str) -> str:
-    """Overwrite SOUL.md with new persona content."""
+    """Overwrite SOUL.md with new behavioral rules."""
     _write_file(SOUL_PATH, content)
-    return "Persona updated."
+    return "Soul updated."
 
 
 def update_user_profile(content: str) -> str:

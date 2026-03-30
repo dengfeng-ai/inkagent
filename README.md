@@ -114,13 +114,14 @@ All memory lives in `memory/` as plain Markdown:
 
 | File | Purpose | Updated by |
 |------|---------|------------|
-| `SOUL.md` | Agent persona — name, tone, language, behavior rules | `update_soul` tool |
+| `IDENTITY.md` | Agent identity metadata — name, creature, vibe, emoji, avatar | `update_identity` tool |
+| `SOUL.md` | Agent behavioral rules — core truths, boundaries, tone, continuity | `update_soul` tool |
 | `USER.md` | User profile — name, role, interests | `update_user_profile` tool |
 | `MEMORY.md` | Long-term memory — curated facts and decisions | `save_memory` tool + automatic promotion |
 | `daily/YYYY-MM-DD.md` | Daily log — ephemeral notes, one file per day | `log_daily` tool |
 | `vectors.db` | sqlite-vec index for semantic search over daily logs | Auto-managed |
 
-The agent sees `SOUL.md`, `USER.md`, `MEMORY.md`, and the last two days of daily logs in every conversation.
+The agent sees `IDENTITY.md`, `SOUL.md`, `USER.md`, `MEMORY.md`, and the last two days of daily logs in every conversation.
 
 **Semantic search**: Daily log entries are automatically embedded and indexed in `vectors.db` when `OPENAI_API_KEY` is set. `recall_memory` uses vector similarity for daily logs (keyword fallback without an API key). `MEMORY.md` is not searched — it's already in the system prompt.
 
@@ -150,7 +151,7 @@ inkagent/
 ├── skills/
 │   ├── shell.py         # run_shell
 │   ├── files.py         # read_file, write_file, edit_file, list_directory
-│   ├── profile.py       # update_soul, update_user_profile
+│   ├── profile.py       # update_identity, update_soul, update_user_profile
 │   ├── memory_skill.py  # log_daily, recall_memory, save_memory
 │   ├── cron.py          # create_cron, list_crons, delete_cron
 │   ├── web_search.py    # web_search (Brave Search API)
@@ -160,6 +161,7 @@ inkagent/
 │       └── skill_name/
 │           └── SKILL.md
 └── memory/              # All memory (gitignored)
+    ├── IDENTITY.md
     ├── SOUL.md
     ├── USER.md
     ├── MEMORY.md
@@ -180,7 +182,8 @@ Key design: `brain.py` has zero knowledge of individual tools or skills. Tools r
 | `create_cron` | Create a scheduled task (cron expression + prompt), bound to current session |
 | `list_crons` | List all scheduled tasks |
 | `delete_cron` | Delete a scheduled task by ID |
-| `update_soul` | Update agent persona — name, tone, language, behavior rules |
+| `update_identity` | Update agent identity metadata — name, creature, vibe, emoji, avatar |
+| `update_soul` | Update agent behavioral rules — tone, boundaries, core truths |
 | `update_user_profile` | Update user info — name, role, location, interests |
 | `log_daily` | Jot a note in today's daily log; important entries auto-promote to long-term memory |
 | `save_memory` | Save important info directly to long-term memory (MEMORY.md) |

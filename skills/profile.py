@@ -1,19 +1,38 @@
-"""Memory skills — persist agent persona and user info."""
+"""Memory skills — persist agent identity, behavioral rules, and user info."""
 
 from agent.registry import register
+from agent.memory import update_identity as _update_identity
 from agent.memory import update_soul as _update_soul
 from agent.memory import update_user_profile as _update_user_profile
 
 
 @register(
-    name="update_soul",
-    description="Update the agent's persona (SOUL.md). Store identity, name, tone, language preference, and behavior rules the user sets for you. Pass the full updated content.",
+    name="update_identity",
+    description="Update the agent's identity metadata (IDENTITY.md). Store name, creature type, vibe, emoji, and avatar. Merge changes into the current IDENTITY.md content (already visible in the system prompt), then pass the full updated Markdown.",
     input_schema={
         "type": "object",
         "properties": {
             "content": {
                 "type": "string",
-                "description": "The full updated persona content in Markdown",
+                "description": "The full updated identity content in Markdown",
+            },
+        },
+        "required": ["content"],
+    },
+)
+def update_identity(content: str) -> str:
+    return _update_identity(content)
+
+
+@register(
+    name="update_soul",
+    description="Update the agent's behavioral rules (SOUL.md). MUST be called whenever the user tells you how to behave — tone, language, response style, things to do or avoid. Merge the new rule into the current SOUL.md content (already visible in the system prompt), then pass the full updated Markdown.",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "content": {
+                "type": "string",
+                "description": "The full updated behavioral rules content in Markdown",
             },
         },
         "required": ["content"],
