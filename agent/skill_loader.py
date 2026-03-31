@@ -1,6 +1,6 @@
 """Markdown skill loader.
 
-Scans skills/instructions/ for SKILL.md files and builds skill sections
+Scans skills/ for SKILL.md files and builds skill sections
 for the system prompt.
 
 Skill file format (YAML frontmatter + Markdown body)::
@@ -26,7 +26,7 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-INSTRUCTIONS_DIR = Path(__file__).resolve().parent.parent / "skills" / "instructions"
+INSTRUCTIONS_DIR = Path(__file__).resolve().parent.parent / "skills"
 
 
 def _check_requirements(requires: dict[str, Any]) -> bool:

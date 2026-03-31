@@ -29,8 +29,8 @@ inkagent/
 │       ├── anthropic.py # Anthropic (Claude) provider
 │       ├── openai.py    # OpenAI provider
 │       └── openai_codex.py # OpenAI Codex provider (ChatGPT subscription via OAuth)
-├── skills/
-│   ├── __init__.py      # Auto-imports all tool skills
+├── tools/
+│   ├── __init__.py      # Auto-imports all tools so they self-register
 │   ├── shell.py         # run_shell tool
 │   ├── files.py         # read_file, write_file, edit_file, list_directory tools (write/edit block .db files)
 │   ├── profile.py       # update_identity + update_soul + update_user_profile tools
@@ -38,10 +38,10 @@ inkagent/
 │   ├── cron.py          # create_cron, list_crons, delete_cron tools
 │   ├── web_search.py    # web_search tool (Brave Search API)
 │   ├── web_fetch.py     # web_fetch tool (HTTP + trafilatura)
-│   ├── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
-│   └── instructions/    # Markdown instruction skills (no code needed)
-│       └── skill_name/  # One directory per skill
-│           └── SKILL.md # YAML frontmatter + Markdown body
+│   └── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
+├── skills/              # Markdown instruction skills (no code needed)
+│   └── skill_name/      # One directory per skill
+│       └── SKILL.md     # YAML frontmatter + Markdown body
 └── memory/
     ├── IDENTITY.md      # Agent identity metadata (name, creature, vibe, emoji, avatar)
     ├── SOUL.md          # Agent behavioral rules (core truths, boundaries, tone, continuity)
@@ -53,7 +53,7 @@ inkagent/
 
 Key design principle: `brain.py` has zero knowledge of individual tools or skills.
 Tools register themselves via `@registry.register(...)` — adding a tool never touches core code.
-Instruction skills are auto-discovered from `skills/instructions/` — adding a skill is just creating a Markdown file.
+Instruction skills are auto-discovered from `skills/` — adding a skill is just creating a Markdown directory with a `SKILL.md` file.
 
 ## Tech Stack
 
@@ -140,7 +140,7 @@ The `memory/` directory is gitignored — never commit it.
 Heartbeat is a special use of the cron system for periodic background checks (email, calendar, etc.) that only notify the user when something needs attention. Implemented as:
 
 - **`memory/HEARTBEAT.md`** — User-editable checklist of things to check periodically
-- **`skills/instructions/heartbeat/SKILL.md`** — Instruction skill teaching the agent the heartbeat workflow
+- **`skills/heartbeat/SKILL.md`** — Instruction skill teaching the agent the heartbeat workflow
 - **`silent_ok` flag on cron jobs** — When set, replies of `HEARTBEAT_OK` are swallowed silently
 
 Setup: create a cron job with `silent_ok=true` whose prompt tells the agent to run the heartbeat skill. The agent reads the checklist, runs the checks, and either reports findings or replies `HEARTBEAT_OK` to stay silent.
@@ -165,10 +165,10 @@ Each tool is a Python function decorated with `@registry.register(...)`.
 The decorator takes `name`, `description`, and `input_schema` (JSON Schema format for Claude tool_use).
 
 To add a new tool:
-1. Create `skills/your_tool.py`
+1. Create `tools/your_tool.py`
 2. Import `register` from `agent.registry`
 3. Decorate your function with `@register(...)`
-4. Add `from skills import your_tool` in `skills/__init__.py`
+4. Add `from tools import your_tool` in `tools/__init__.py`
 
 Built-in tools:
 - `run_shell` — executes shell commands, 30s timeout, output capped at 3000 chars
@@ -194,7 +194,7 @@ Built-in tools:
 
 ### Instruction Skills (Markdown files)
 
-Instruction skills are pure Markdown files in `skills/instructions/` that teach the LLM workflows without writing Python code. They guide the LLM on *when and how* to combine existing tools for specific tasks.
+Instruction skills are pure Markdown files in `skills/` that teach the LLM workflows without writing Python code. They guide the LLM on *when and how* to combine existing tools for specific tasks.
 
 File format — YAML frontmatter + Markdown body:
 ```yaml
@@ -209,7 +209,7 @@ requires:            # optional eligibility gating
 Instructions for the LLM describing the workflow…
 ```
 
-To add a new instruction skill: create a directory in `skills/instructions/` with a `SKILL.md` file (e.g. `skills/instructions/daily_report/SKILL.md`). No Python, no imports. The skill loader (`agent/skill_loader.py`) discovers it automatically.
+To add a new instruction skill: create a directory in `skills/` with a `SKILL.md` file (e.g. `skills/daily_report/SKILL.md`). No Python, no imports. The skill loader (`agent/skill_loader.py`) discovers it automatically.
 
 - Only skill meta (name, description, path) is injected into the system prompt — the LLM uses `read_file` to load full instructions on demand
 - Skills with unmet `requires` are silently skipped
@@ -250,7 +250,7 @@ The `openai-codex` provider allows running inkagent using a **ChatGPT Plus/Pro s
 - Type hints on all function signatures
 - No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, `scheduler.py`, `vector_store.py`, `codex_auth.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
 - Cap tool output at `TOOL_OUTPUT_CAP` chars (see `agent/config.py`) before returning to avoid context explosion
-- IMPORTANT: Never import individual tool modules in `brain.py` — only import the `skills` package which auto-registers all tools
+- IMPORTANT: Never import individual tool modules in `brain.py` — only import the `tools` package which auto-registers all tools
 - IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — always go through `providers`
 
 ## Roadmap (in order)

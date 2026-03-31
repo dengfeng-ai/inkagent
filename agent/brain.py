@@ -41,8 +41,8 @@ else:
     def _get_langfuse():
         return _null_lf
 
-# Import the skills package to trigger tool auto-registration via @register decorators.
-import skills  # noqa: F401
+# Import the tools package to trigger tool auto-registration via @register decorators.
+import tools  # noqa: F401
 
 
 @_observe()

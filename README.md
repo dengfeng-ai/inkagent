@@ -148,7 +148,7 @@ inkagent/
 │       ├── base.py      # LLMProvider ABC + shared types
 │       ├── anthropic.py # Anthropic (Claude)
 │       └── openai.py    # OpenAI
-├── skills/
+├── tools/
 │   ├── shell.py         # run_shell
 │   ├── files.py         # read_file, write_file, edit_file, list_directory
 │   ├── profile.py       # update_identity, update_soul, update_user_profile
@@ -156,10 +156,10 @@ inkagent/
 │   ├── cron.py          # create_cron, list_crons, delete_cron
 │   ├── web_search.py    # web_search (Brave Search API)
 │   ├── web_fetch.py     # web_fetch (page content extraction)
-│   ├── gmail.py         # gmail_search, gmail_read, gmail_send, gmail_mark_read
-│   └── instructions/    # Markdown instruction skills
-│       └── skill_name/
-│           └── SKILL.md
+│   └── gmail.py         # gmail_search, gmail_read, gmail_send, gmail_mark_read
+├── skills/              # Markdown instruction skills
+│   └── skill_name/
+│       └── SKILL.md
 └── memory/              # All memory (gitignored)
     ├── IDENTITY.md
     ├── SOUL.md
@@ -168,7 +168,7 @@ inkagent/
     └── daily/
 ```
 
-Key design: `brain.py` has zero knowledge of individual tools or skills. Tools register via `@registry.register(...)`, instruction skills are auto-discovered from `skills/instructions/` — adding either never touches core code.
+Key design: `brain.py` has zero knowledge of individual tools or skills. Tools register via `@registry.register(...)`, instruction skills are auto-discovered from `skills/` — adding either never touches core code.
 
 ## Built-in Tools
 
@@ -197,7 +197,7 @@ Key design: `brain.py` has zero knowledge of individual tools or skills. Tools r
 
 ## Adding a Tool
 
-Create `skills/my_tool.py`:
+Create `tools/my_tool.py`:
 
 ```python
 from agent.registry import register
@@ -217,17 +217,17 @@ def my_tool(param: str) -> str:
     return "result"
 ```
 
-Add to `skills/__init__.py`:
+Add to `tools/__init__.py`:
 
 ```python
-from skills import my_tool  # noqa: F401
+from tools import my_tool  # noqa: F401
 ```
 
 Done. The agent picks it up automatically.
 
 ## Adding an Instruction Skill
 
-Create `skills/instructions/my_skill/SKILL.md`:
+Create `skills/my_skill/SKILL.md`:
 
 ```yaml
 ---
