@@ -1,18 +1,44 @@
 """File operation skills — read, write, edit, and list files."""
 
 import os
+from pathlib import Path
 
 from agent.config import TOOL_OUTPUT_CAP
 from agent.registry import register
+
+# Project root — the directory containing this package.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Only these directories (relative to project root) are writable by the agent.
+_WRITABLE_DIRS = ("memory", "conversations", "user_skills")
 
 # Files that must not be modified by the LLM.
 _PROTECTED_SUFFIXES = (".db", ".sqlite", ".sqlite3")
 
 
-def _is_protected(path: str) -> str | None:
-    """Return an error message if the path is protected, else None."""
-    if path.endswith(_PROTECTED_SUFFIXES):
-        return f"Error: {os.path.basename(path)} is a managed database file and cannot be modified directly."
+def _check_writable(path: str) -> str | None:
+    """Return an error message if *path* is not writable, else None.
+
+    Rules:
+    - .db/.sqlite files are always blocked.
+    - Inside the project: only memory/, conversations/, user_skills/ are writable.
+    - Outside the project: no restrictions.
+    """
+    resolved = Path(path).resolve()
+
+    if resolved.suffix in _PROTECTED_SUFFIXES:
+        return f"Error: {resolved.name} is a managed database file and cannot be modified directly."
+
+    try:
+        rel = resolved.relative_to(_PROJECT_ROOT)
+    except ValueError:
+        # Outside the project — allow freely.
+        return None
+
+    top = rel.parts[0] if rel.parts else ""
+    if top not in _WRITABLE_DIRS:
+        return f"Error: within this project, writes are restricted to {', '.join(_WRITABLE_DIRS)}/ — cannot write to {top}/"
+
     return None
 
 
@@ -67,7 +93,7 @@ def read_file(path: str) -> str:
 )
 def write_file(path: str, content: str) -> str:
     path = os.path.expanduser(path)
-    if err := _is_protected(path):
+    if err := _check_writable(path):
         return err
     try:
         parent = os.path.dirname(path)
@@ -106,7 +132,7 @@ def write_file(path: str, content: str) -> str:
 )
 def edit_file(path: str, old_string: str, new_string: str) -> str:
     path = os.path.expanduser(path)
-    if err := _is_protected(path):
+    if err := _check_writable(path):
         return err
     try:
         with open(path, "r", encoding="utf-8") as f:

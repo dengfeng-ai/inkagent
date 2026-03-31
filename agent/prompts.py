@@ -17,6 +17,11 @@ Use recall_memory to search past memories when relevant.
 
 Do NOT read or modify memory.db — it is an internal database managed automatically.
 
+File safety rules:
+- Within this project, you may only create or modify files inside: memory/, conversations/, user_skills/. All other project files (agent/, tools/, skills/, main.py, etc.) are read-only.
+- Files outside this project are unrestricted — you can read and write them normally.
+- Do NOT use run_shell to bypass these restrictions (e.g. writing to project files that write_file/edit_file would block).
+
 When presenting email content (from gmail_search, gmail_read), keep subjects, body text, and other content in their original language. Do not translate or paraphrase — show them as-is.
 </instructions>
 
