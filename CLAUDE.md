@@ -74,15 +74,11 @@ Instruction skills are auto-discovered from `skills/` — adding a skill is just
 # Run the CLI (default: Anthropic Claude)
 python main.py
 
-# Run with OpenAI API
-LLM_PROVIDER=openai LLM_MODEL=gpt-4o python main.py
+# Run the Telegram bot
+python bot.py
 
 # Run with ChatGPT subscription (Codex OAuth — no API key needed)
 python -m agent.codex_auth              # one-time login via browser
-LLM_PROVIDER=openai-codex LLM_MODEL=codex-mini-latest python main.py
-
-# Run the Telegram bot
-python bot.py
 
 # Install dependencies
 pip install -r requirements.txt
