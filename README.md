@@ -72,11 +72,6 @@ docker run --env-file .env \
 Requires **Python 3.11+**.
 
 ```bash
-# setup script (creates venv, installs deps)
-./setup.sh          # macOS / Linux
-setup.bat           # Windows
-
-# — or manual —
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
