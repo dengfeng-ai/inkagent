@@ -66,6 +66,12 @@ _Update these fields as you learn about the user. Only record durable info, not 
 ## Notes
 """
 
+MEMORY_TEMPLATE = """\
+# MEMORY.md
+
+_Long-term memory. Important facts, preferences, and decisions are saved here — either explicitly via save_memory or automatically promoted from daily logs._
+"""
+
 
 def _ensure_dir() -> None:
     os.makedirs(MEMORY_DIR, exist_ok=True)
@@ -163,14 +169,26 @@ def update_user_profile(content: str) -> str:
     return "User profile updated."
 
 
+def _ensure_memory_file() -> None:
+    """Seed MEMORY.md with the default template if it doesn't exist or is empty."""
+    content = _read_file(LONG_TERM_PATH).strip()
+    if not content:
+        _write_file(LONG_TERM_PATH, MEMORY_TEMPLATE)
+
+
 def get_long_term_memory() -> str:
-    """Return full MEMORY.md content for system prompt injection."""
+    """Return full MEMORY.md content for system prompt injection.
+
+    Seeds MEMORY.md with a default template on first access so the file
+    starts with a consistent header.
+    """
+    _ensure_memory_file()
     return _read_file(LONG_TERM_PATH).strip()
 
 
 def save_memory(content: str) -> str:
     """Append an entry directly to MEMORY.md. Used for explicit 'remember this' requests."""
-    _ensure_dir()
+    _ensure_memory_file()
     today = date.today().isoformat()
     entry = f"\n## {today} | saved\n{content.strip()}\n"
     try:
@@ -304,7 +322,7 @@ def apply_promotion(entries: str) -> str:
     try:
         # Append to MEMORY.md if there's anything to promote
         if entries.strip():
-            _ensure_dir()
+            _ensure_memory_file()
             with open(LONG_TERM_PATH, "a") as f:
                 f.write(f"\n{entries.strip()}\n")
             logger.info("Promoted entries from %s to MEMORY.md", yesterday.isoformat())

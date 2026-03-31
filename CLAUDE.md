@@ -111,7 +111,7 @@ Four-tier Markdown memory in `memory/`:
 - **`IDENTITY.md`** — Agent identity metadata (name, creature type, vibe, emoji, avatar). Injected into the system prompt. Updated by the LLM via `update_identity` tool when the user sets the agent's name, emoji, or avatar.
 - **`SOUL.md`** — Agent behavioral rules (core truths, boundaries, tone, continuity). Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (tone, language, boundaries).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
-- **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Writable via `save_memory` tool (for explicit "remember this" requests) and via the automatic promotion system.
+- **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Auto-seeded with a `# MEMORY.md` header template on first access. Writable via `save_memory` tool (for explicit "remember this" requests) and via the automatic promotion system.
 - **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). Each entry is also indexed into the vector store for semantic search.
 - **`memory.db`** — sqlite-vec database for semantic search over daily logs. Auto-created when an embedding provider is available. Not required — system degrades to keyword search without it.
 

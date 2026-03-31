@@ -177,7 +177,7 @@ inkagent 的记忆全部存储在 `memory/` 目录下的 Markdown 文件中，�
 | `IDENTITY.md` | agent 身份 — 名字、物种、语气、emoji、头像 | 对话中告诉 agent "你叫小墨" 等 |
 | `SOUL.md` | agent 行为规则 — 语气、边界、核心信念 | 对话中告诉 agent "用中文回复" 等 |
 | `USER.md` | 用户资料 — 姓名、角色、兴趣 | agent 在对话中自动学习 |
-| `MEMORY.md` | 长期记忆 — 重要的事实和决策 | `save_memory` 工具 + 自动提升 |
+| `MEMORY.md` | 长期记忆 — 重要的事实和决策（首次访问时自动创建带标题模板） | `save_memory` 工具 + 自动提升 |
 | `daily/YYYY-MM-DD.md` | 每日日志 — 临时笔记，一天一个文件 | `log_daily` 工具 |
 | `memory.db` | 向量索引（记忆搜索用） | 自动管理 |
 

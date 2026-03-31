@@ -177,7 +177,7 @@ All of inkagent's memory is stored as Markdown files in the `memory/` directory.
 | `IDENTITY.md` | Agent identity — name, creature type, vibe, emoji, avatar | Tell the agent in conversation, e.g. "Your name is Inky" |
 | `SOUL.md` | Agent behavior rules — tone, boundaries, core beliefs | Tell the agent, e.g. "Reply in English" |
 | `USER.md` | User profile — name, role, interests | The agent learns automatically from conversation |
-| `MEMORY.md` | Long-term memory — important facts and decisions | `save_memory` tool + automatic promotion |
+| `MEMORY.md` | Long-term memory — important facts and decisions (auto-created with header template on first access) | `save_memory` tool + automatic promotion |
 | `daily/YYYY-MM-DD.md` | Daily log — ephemeral notes, one file per day | `log_daily` tool |
 | `memory.db` | Vector index (for memory search) | Auto-managed |
 
