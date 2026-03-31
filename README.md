@@ -44,7 +44,7 @@ docker build -t inkagent .
 docker run -it --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
-  -v $(pwd)/skills:/app/skills \
+  -v $(pwd)/user_skills:/app/user_skills \
   inkagent
 ```
 
@@ -72,7 +72,7 @@ inkagent/
 │   ├── config.py        # Shared constants (limits, timeouts)
 │   ├── memory.py        # Markdown memory (read/write)
 │   ├── registry.py      # Tool registration
-│   ├── skill_loader.py  # Markdown skill loader
+│   ├── skill_loader.py  # Markdown skill loader (built-in + user override)
 │   ├── prompts.py       # Prompt templates
 │   ├── session.py       # Conversation history + persistence
 │   ├── compression.py   # Context window compression
@@ -85,11 +85,12 @@ inkagent/
 │       ├── openai.py    # OpenAI
 │       └── openai_codex.py # OpenAI Codex (ChatGPT subscription)
 ├── tools/               # Self-registering Python tools
-├── skills/              # Markdown instruction skills
+├── skills/              # Built-in instruction skills (git-tracked)
+├── user_skills/         # User skill overrides (gitignored)
 └── memory/              # All memory (gitignored)
 ```
 
-Key design: `brain.py` has zero knowledge of individual tools or skills. Tools register via `@registry.register(...)`, instruction skills are auto-discovered from `skills/` — adding either never touches core code.
+Key design: `brain.py` has zero knowledge of individual tools or skills. Tools register via `@registry.register(...)`, instruction skills are auto-discovered from `skills/` and `user_skills/` — adding either never touches core code. User skills in `user_skills/` override built-in ones with the same name, so upgrades via `git pull` never conflict with customizations.
 
 ## Roadmap
 

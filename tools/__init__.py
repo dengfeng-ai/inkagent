@@ -8,3 +8,4 @@ from tools import web_fetch  # noqa: F401
 from tools import files  # noqa: F401
 from tools import cron  # noqa: F401
 from tools import gmail  # noqa: F401
+from tools import skill_edit  # noqa: F401

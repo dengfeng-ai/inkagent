@@ -39,3 +39,16 @@ create_cron(id="heartbeat", cron="*/30 * * * *", prompt="Run heartbeat check. Re
 ```
 
 The user can edit `memory/HEARTBEAT.md` at any time to add or remove checks.
+
+## HEARTBEAT.md format
+
+When creating `memory/HEARTBEAT.md`, use this format:
+
+```markdown
+# HEARTBEAT.md
+
+_Checklist for periodic heartbeat checks._
+
+- [ ] Check item one
+- [ ] Check item two
+```

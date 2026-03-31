@@ -1,5 +1,7 @@
 """Cron skills — create, list, and delete scheduled tasks."""
 
+import os
+
 import agent.session as _session
 from agent.registry import register
 from agent.scheduler import DEFAULT_TIMEZONE, add_job, remove_job, list_jobs
@@ -48,12 +50,19 @@ def create_cron(id: str, cron: str, prompt: str, timezone: str = DEFAULT_TIMEZON
         session_id = _session.current_session_id
         job = add_job(job_id=id, cron_expr=cron, prompt=prompt, session_id=session_id, tz=timezone, silent_ok=silent_ok)
         mode = " (heartbeat mode)" if job.get("silent_ok") else ""
-        return (
+        result = (
             f"Created scheduled task '{job['id']}'{mode}.\n"
             f"Schedule: {job['cron']} ({job['timezone']})\n"
             f"Prompt: {job['prompt']}\n"
             f"Session: {job['session_id']}"
         )
+        if silent_ok and not os.path.exists(os.path.join("memory", "HEARTBEAT.md")):
+            result += (
+                "\n\nHeartbeat checklist (memory/HEARTBEAT.md) not found. "
+                "Ask the user what they want to check periodically, "
+                "then create the file. Keep the reply short."
+            )
+        return result
     except ValueError as e:
         return f"Error: {e}"
 
