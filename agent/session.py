@@ -4,7 +4,9 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-CONVERSATIONS_DIR = Path(__file__).resolve().parent.parent / "conversations"
+from agent.config import CONVERSATIONS_DIR as _CONVERSATIONS_DIR_STR
+
+CONVERSATIONS_DIR = Path(_CONVERSATIONS_DIR_STR)
 
 # Per-session conversation history and file paths.
 _sessions: dict[str, list[dict]] = {}

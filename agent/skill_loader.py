@@ -25,11 +25,15 @@ from typing import Any
 
 import yaml
 
+from agent.config import (
+    BUILTIN_SKILLS_DIR as _BUILTIN_SKILLS_DIR_STR,
+    USER_SKILLS_DIR as _USER_SKILLS_DIR_STR,
+)
+
 logger = logging.getLogger(__name__)
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-BUILTIN_SKILLS_DIR = _PROJECT_ROOT / "skills"
-USER_SKILLS_DIR = _PROJECT_ROOT / "user_skills"
+BUILTIN_SKILLS_DIR = Path(_BUILTIN_SKILLS_DIR_STR)
+USER_SKILLS_DIR = Path(_USER_SKILLS_DIR_STR)
 
 
 def _check_requirements(requires: dict[str, Any]) -> bool:

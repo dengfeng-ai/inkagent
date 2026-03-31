@@ -2,6 +2,7 @@
 
 import os
 
+from agent.config import HEARTBEAT_PATH as _HEARTBEAT_PATH
 import agent.session as _session
 from agent.registry import register
 from agent.scheduler import DEFAULT_TIMEZONE, add_job, remove_job, list_jobs
@@ -56,7 +57,7 @@ def create_cron(id: str, cron: str, prompt: str, timezone: str = DEFAULT_TIMEZON
             f"Prompt: {job['prompt']}\n"
             f"Session: {job['session_id']}"
         )
-        if silent_ok and not os.path.exists(os.path.join("memory", "HEARTBEAT.md")):
+        if silent_ok and not os.path.exists(_HEARTBEAT_PATH):
             result += (
                 "\n\nHeartbeat checklist (memory/HEARTBEAT.md) not found. "
                 "Ask the user what they want to check periodically, "

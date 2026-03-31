@@ -3,14 +3,14 @@
 import os
 from pathlib import Path
 
-from agent.config import TOOL_OUTPUT_CAP
+from agent.config import TOOL_OUTPUT_CAP, WRITABLE_DIRS
 from agent.registry import register
 
 # Project root — the directory containing this package.
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Only these directories (relative to project root) are writable by the agent.
-_WRITABLE_DIRS = ("memory", "conversations", "user_skills")
+_WRITABLE_DIRS = WRITABLE_DIRS
 
 # Files that must not be modified by the LLM.
 _PROTECTED_SUFFIXES = (".db", ".sqlite", ".sqlite3")

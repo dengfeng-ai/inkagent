@@ -15,11 +15,11 @@ from zoneinfo import ZoneInfo
 
 from croniter import croniter
 
+from agent.config import CRONS_PATH
+
 DEFAULT_TIMEZONE = "Asia/Shanghai"
 
 logger = logging.getLogger(__name__)
-
-CRONS_PATH = os.path.join("memory", "crons.json")
 
 # In-memory job list, synced with crons.json.
 _jobs: list[dict[str, Any]] = []

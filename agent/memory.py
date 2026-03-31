@@ -13,16 +13,18 @@ import os
 import re
 from datetime import date, datetime, timedelta
 
+from agent.config import (
+    DAILY_DIR,
+    IDENTITY_PATH,
+    LONG_TERM_PATH,
+    MEMORY_DIR,
+    SOUL_PATH,
+    USER_PATH,
+)
+
 logger = logging.getLogger(__name__)
 
 PROMOTED_MARKER = "<!-- promoted -->"
-
-MEMORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "memory")
-DAILY_DIR = os.path.join(MEMORY_DIR, "daily")
-IDENTITY_PATH = os.path.join(MEMORY_DIR, "IDENTITY.md")
-SOUL_PATH = os.path.join(MEMORY_DIR, "SOUL.md")
-USER_PATH = os.path.join(MEMORY_DIR, "USER.md")
-LONG_TERM_PATH = os.path.join(MEMORY_DIR, "MEMORY.md")
 
 IDENTITY_TEMPLATE = """\
 # IDENTITY.md

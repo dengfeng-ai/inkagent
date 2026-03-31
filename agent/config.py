@@ -1,6 +1,40 @@
 """Shared constants for the agent package."""
 
+import os
+
+__version__ = "0.1.0"
+
+# ---------------------------------------------------------------------------
+# Directory layout — centralised so a future migration to ~/.inkagent/ only
+# touches this block.
+# ---------------------------------------------------------------------------
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+DATA_DIR = _PROJECT_ROOT  # will become ~/.inkagent/ when packaged
+
+MEMORY_DIR = os.path.join(DATA_DIR, "memory")
+DAILY_DIR = os.path.join(MEMORY_DIR, "daily")
+CONVERSATIONS_DIR = os.path.join(DATA_DIR, "conversations")
+CRONS_PATH = os.path.join(MEMORY_DIR, "crons.json")
+
+# Memory files
+IDENTITY_PATH = os.path.join(MEMORY_DIR, "IDENTITY.md")
+SOUL_PATH = os.path.join(MEMORY_DIR, "SOUL.md")
+USER_PATH = os.path.join(MEMORY_DIR, "USER.md")
+LONG_TERM_PATH = os.path.join(MEMORY_DIR, "MEMORY.md")
+HEARTBEAT_PATH = os.path.join(MEMORY_DIR, "HEARTBEAT.md")
+DB_PATH = os.path.join(MEMORY_DIR, "memory.db")
+
+# Skills directories
+BUILTIN_SKILLS_DIR = os.path.join(_PROJECT_ROOT, "skills")
+USER_SKILLS_DIR = os.path.join(_PROJECT_ROOT, "user_skills")
+
+# Writable directories (relative names, checked against project root)
+WRITABLE_DIRS = ("memory", "conversations", "user_skills")
+
+# ---------------------------------------------------------------------------
 # LLM generation
+# ---------------------------------------------------------------------------
 MAX_REPLY_TOKENS = 4096  # max tokens per LLM response
 MAX_TOOL_ROUNDS = 10  # max tool-use loop iterations per agent turn
 
