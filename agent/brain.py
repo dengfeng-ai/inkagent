@@ -8,7 +8,7 @@ from datetime import date
 
 from agent import registry, memory
 from agent.config import MAX_REPLY_TOKENS, MAX_TOOL_ROUNDS
-from agent.prompts import SYSTEM_PROMPT
+from agent.prompts import SYSTEM_PROMPT, ONBOARDING_HINT
 from agent.skill_loader import load_skills, build_skill_prompt
 import agent.session as _session
 from agent.session import get_conversation, save_conversation, make_message
@@ -74,6 +74,9 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
         daily_logs=daily_logs if daily_logs else "(no daily logs yet)",
         skills=skill_prompt,
     )
+
+    if memory.is_first_run():
+        system += ONBOARDING_HINT
 
     provider = get_provider()
     model = get_model()

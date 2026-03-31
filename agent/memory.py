@@ -91,6 +91,21 @@ def _write_file(path: str, content: str) -> None:
         raise
 
 
+def _is_template(path: str, template: str) -> bool:
+    """Check if a memory file is still the default template (or missing)."""
+    content = _read_file(path).strip()
+    return not content or content == template.strip()
+
+
+def is_first_run() -> bool:
+    """Check if all three profile files are still untouched default templates."""
+    return (
+        _is_template(IDENTITY_PATH, IDENTITY_TEMPLATE)
+        and _is_template(SOUL_PATH, SOUL_TEMPLATE)
+        and _is_template(USER_PATH, USER_TEMPLATE)
+    )
+
+
 def get_identity() -> str:
     """Return the agent identity metadata for the system prompt.
 
