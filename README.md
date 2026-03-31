@@ -119,11 +119,11 @@ All memory lives in `memory/` as plain Markdown:
 | `USER.md` | User profile — name, role, interests | `update_user_profile` tool |
 | `MEMORY.md` | Long-term memory — curated facts and decisions | `save_memory` tool + automatic promotion |
 | `daily/YYYY-MM-DD.md` | Daily log — ephemeral notes, one file per day | `log_daily` tool |
-| `vectors.db` | sqlite-vec index for semantic search over daily logs | Auto-managed |
+| `memory.db` | sqlite-vec index for semantic search over daily logs | Auto-managed |
 
 The agent sees `IDENTITY.md`, `SOUL.md`, `USER.md`, `MEMORY.md`, and the last two days of daily logs in every conversation.
 
-**Semantic search**: Daily log entries are automatically embedded and indexed in `vectors.db` when `OPENAI_API_KEY` is set. `recall_memory` uses vector similarity for daily logs (keyword fallback without an API key). `MEMORY.md` is not searched — it's already in the system prompt.
+**Semantic search**: Daily log entries are automatically embedded and indexed in `memory.db` when `OPENAI_API_KEY` is set. `recall_memory` uses vector similarity for daily logs (keyword fallback without an API key). `MEMORY.md` is not searched — it's already in the system prompt.
 
 ## Architecture
 

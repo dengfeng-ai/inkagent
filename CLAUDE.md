@@ -60,7 +60,7 @@ Instruction skills are auto-discovered from `skills/instructions/` — adding a 
 - Python 3.11+
 - `anthropic` SDK + `openai` SDK — pluggable via `agent/providers/`
 - Markdown files — all memory storage
-- `sqlite-vec` — vector storage for semantic search over daily logs (`memory/vectors.db`)
+- `sqlite-vec` — vector storage for semantic search over daily logs (`memory/memory.db`)
 - `python-telegram-bot` — Telegram bot interface (`bot.py`)
 - `httpx` — HTTP client for web search and fetch
 - `trafilatura` — HTML content extraction for `web_fetch`
@@ -113,7 +113,7 @@ Four-tier Markdown memory in `memory/`:
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
 - **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Writable via `save_memory` tool (for explicit "remember this" requests) and via the automatic promotion system.
 - **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). Each entry is also indexed into the vector store for semantic search.
-- **`vectors.db`** — sqlite-vec database for semantic search over daily logs. Auto-created when an embedding provider is available. Not required — system degrades to keyword search without it.
+- **`memory.db`** — sqlite-vec database for semantic search over daily logs. Auto-created when an embedding provider is available. Not required — system degrades to keyword search without it.
 
 **Vector search**: `recall_memory` uses semantic search (sqlite-vec + OpenAI embeddings) for daily logs when `OPENAI_API_KEY` is set. Falls back to keyword search otherwise. MEMORY.md is not searched by `recall_memory` — it's already injected into the system prompt, so the LLM can see it directly.
 

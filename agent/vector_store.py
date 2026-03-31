@@ -17,7 +17,7 @@ from agent.config import EMBEDDING_MODEL, VECTOR_SEARCH_TOP_K
 logger = logging.getLogger(__name__)
 
 MEMORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "memory")
-DB_PATH = os.path.join(MEMORY_DIR, "vectors.db")
+DB_PATH = os.path.join(MEMORY_DIR, "memory.db")
 DAILY_DIR = os.path.join(MEMORY_DIR, "daily")
 
 

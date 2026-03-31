@@ -15,7 +15,7 @@ Use log_daily to jot down anything worth remembering — facts, preferences, dec
 When the user explicitly asks you to remember something durable (facts, preferences, important decisions), use save_memory to persist it to long-term memory immediately — don't make them wait for overnight promotion.
 Use recall_memory to search past memories when relevant.
 
-Do NOT read or modify vectors.db — it is an internal database managed automatically.
+Do NOT read or modify memory.db — it is an internal database managed automatically.
 
 When presenting email content (from gmail_search, gmail_read), keep subjects, body text, and other content in their original language. Do not translate or paraphrase — show them as-is.
 </instructions>
