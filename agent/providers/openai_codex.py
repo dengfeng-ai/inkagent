@@ -73,7 +73,8 @@ class OpenAICodexProvider(LLMProvider):
     ) -> str:
         payload = {
             "model": model,
-            "input": prompt,
+            "instructions": "You are a helpful assistant.",
+            "input": [{"role": "user", "content": prompt}],
             "store": False,
         }
         raw = self._request(payload)

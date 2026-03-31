@@ -22,8 +22,8 @@ _DEFAULTS: dict[str, dict[str, str]] = {
         "small_model": "gpt-4o-mini",
     },
     "openai-codex": {
-        "model": "codex-mini-latest",
-        "small_model": "codex-mini-latest",
+        "model": "gpt-5.4",
+        "small_model": "gpt-5.4-mini",
     },
 }
 

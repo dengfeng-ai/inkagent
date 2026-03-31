@@ -1,7 +1,6 @@
 """LLM agentic loop using pluggable provider."""
 
 import logging
-import os
 import time
 
 from datetime import date
@@ -18,28 +17,7 @@ from agent.providers import get_provider, get_model, LLMError
 
 logger = logging.getLogger(__name__)
 
-# Langfuse is optional — only enable when credentials are configured.
-_langfuse_enabled = bool(os.environ.get("LANGFUSE_PUBLIC_KEY"))
-
-if _langfuse_enabled:
-    from langfuse import observe as _observe, get_client as _get_langfuse
-else:
-    # No-op replacements when Langfuse is not configured.
-    def _observe(**kwargs):
-        """No-op decorator."""
-        def decorator(fn):
-            return fn
-        return decorator
-
-    class _NullLangfuse:
-        """Stub that silently ignores all method calls."""
-        def __getattr__(self, _name):
-            return lambda *a, **kw: None
-
-    _null_lf = _NullLangfuse()
-
-    def _get_langfuse():
-        return _null_lf
+from agent.tracing import observe as _observe, get_langfuse as _get_langfuse
 
 # Import the tools package to trigger tool auto-registration via @register decorators.
 import tools  # noqa: F401

@@ -12,6 +12,7 @@ from agent.config import (
 from agent.prompts import SUMMARY_PROMPT
 from agent.providers import get_provider, get_small_model, LLMError
 from agent.session import make_message
+from agent.tracing import observe, get_langfuse
 
 logger = logging.getLogger(__name__)
 
@@ -48,18 +49,29 @@ def _format_messages_for_summary(messages: list[dict]) -> str:
     return "\n".join(lines)
 
 
+@observe(as_type="generation")
 def _summarize_messages(messages: list[dict]) -> str:
     """Use a small model to summarize old conversation messages."""
     text = _format_messages_for_summary(messages)
     prompt = SUMMARY_PROMPT.format(conversation=text)
+    model = get_small_model()
 
     logger.info("Summarizing %d messages for context compression", len(messages))
+    lf = get_langfuse()
+    lf.update_current_generation(
+        name="compression",
+        model=model,
+        input=prompt,
+        model_parameters={"max_tokens": 1024},
+    )
     try:
-        return get_provider().simple_complete(
-            model=get_small_model(),
+        result = get_provider().simple_complete(
+            model=model,
             prompt=prompt,
             max_tokens=1024,
         )
+        lf.update_current_generation(output=result)
+        return result
     except LLMError as e:
         logger.error("Summarization API call failed: %s", e)
         return f"[Summary unavailable — earlier conversation context was dropped]\n{text[:500]}"

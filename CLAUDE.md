@@ -94,8 +94,8 @@ cat memory/USER.md
 | Variable | Default | Description |
 |---|---|---|
 | `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `openai-codex` |
-| `LLM_MODEL` | per-provider | Main model (e.g. `claude-sonnet-4-20250514`, `gpt-4o`) |
-| `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (e.g. `claude-haiku-4-5-20251001`, `gpt-4o-mini`) |
+| `LLM_MODEL` | per-provider | Main model (e.g. `claude-sonnet-4-20250514`, `gpt-4o`, `gpt-5.4`) |
+| `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (e.g. `claude-haiku-4-5-20251001`, `gpt-4o-mini`, `gpt-5.4-mini`) |
 | `BRAVE_API_KEY` | — | Brave Search API key (required for `web_search` tool) |
 | `GMAIL_ADDRESS` | — | Gmail address (required for Gmail tools) |
 | `GMAIL_APP_PASSWORD` | — | Gmail App Password (required for Gmail tools, generate at myaccount.google.com/apppasswords) |

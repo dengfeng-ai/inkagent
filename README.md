@@ -246,9 +246,9 @@ All config lives in `.env` (gitignored). See [`.env.example`](.env.example) for 
 |----------|----------|-------------|
 | `ANTHROPIC_API_KEY` | For Anthropic | Claude API key |
 | `OPENAI_API_KEY` | For OpenAI | OpenAI API key (also enables semantic memory search when using Anthropic) |
-| `LLM_PROVIDER` | No | `anthropic` (default) or `openai` |
-| `LLM_MODEL` | No | Main model (default: `claude-sonnet-4-20250514` / `gpt-4o`) |
-| `LLM_SMALL_MODEL` | No | Cheap model for compression/promotion (default: `claude-haiku-4-5-20251001` / `gpt-4o-mini`) |
+| `LLM_PROVIDER` | No | `anthropic`, `openai`, or `openai-codex` |
+| `LLM_MODEL` | No | Main model (default: `claude-sonnet-4-20250514` / `gpt-4o` / `gpt-5.4`) |
+| `LLM_SMALL_MODEL` | No | Cheap model for compression/promotion (default: `claude-haiku-4-5-20251001` / `gpt-4o-mini` / `gpt-5.4-mini`) |
 | `BRAVE_API_KEY` | For web search | [Brave Search API](https://brave.com/search/api/) key (free: 2000 queries/mo) |
 | `GMAIL_ADDRESS` | For Gmail | Gmail address |
 | `GMAIL_APP_PASSWORD` | For Gmail | [App Password](https://myaccount.google.com/apppasswords) (requires 2-Step Verification) |
