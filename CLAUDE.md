@@ -14,7 +14,7 @@ inkagent/
 │   ├── config.py        # Shared constants (token limits, timeouts, caps)
 │   ├── memory.py        # Markdown-based memory (read/write)
 │   ├── registry.py      # Tool registration system (Python tools)
-│   ├── skill_loader.py  # Markdown skill loader (instruction skills)
+│   ├── skill_loader.py  # Markdown skill loader (built-in + user override)
 │   ├── prompts.py       # Prompt templates (system, promotion, summary)
 │   ├── session.py       # Conversation history management + JSON persistence
 │   ├── compression.py   # Context window estimation + small-model summarization
@@ -38,10 +38,14 @@ inkagent/
 │   ├── cron.py          # create_cron, list_crons, delete_cron tools
 │   ├── web_search.py    # web_search tool (Brave Search API)
 │   ├── web_fetch.py     # web_fetch tool (HTTP + trafilatura)
-│   └── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
-├── skills/              # Markdown instruction skills (no code needed)
+│   ├── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
+│   └── skill_edit.py    # edit_skill tool (copy-on-write to user_skills/)
+├── skills/              # Built-in instruction skills (git-tracked)
 │   └── skill_name/      # One directory per skill
 │       └── SKILL.md     # YAML frontmatter + Markdown body
+├── user_skills/         # User skill overrides (gitignored, same structure as skills/)
+│   └── skill_name/      # Same name as built-in skill to override it
+│       └── SKILL.md
 └── memory/
     ├── IDENTITY.md      # Agent identity metadata (name, creature, vibe, emoji, avatar)
     ├── SOUL.md          # Agent behavioral rules (core truths, boundaries, tone, continuity)
@@ -175,8 +179,8 @@ Built-in tools:
 - `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`); important entries are auto-promoted to MEMORY.md overnight
 - `save_memory` — saves important information directly to long-term memory (`MEMORY.md`); use for explicit "remember this" requests
 - `read_file` — reads a file's text content (truncated at `TOOL_OUTPUT_CAP` chars)
-- `write_file` — writes content to a file, creating parent directories as needed
-- `edit_file` — replaces an exact unique string match in a file (search-and-replace)
+- `write_file` — writes content to a file, creating parent directories as needed. Within the project, writes are restricted to `memory/`, `conversations/`, `user_skills/`; files outside the project are unrestricted
+- `edit_file` — replaces an exact unique string match in a file (search-and-replace). Same write restrictions as `write_file`
 - `list_directory` — lists files and subdirectories at a given path
 - `create_cron` — creates a scheduled task with a cron expression + prompt; binds to the current session. Supports `silent_ok` flag for heartbeat-style jobs (suppresses notification when agent replies `HEARTBEAT_OK`)
 - `list_crons` — lists all scheduled tasks
@@ -187,10 +191,17 @@ Built-in tools:
 - `gmail_read` — reads full email content by UID (includes attachments list, Message-ID for replies)
 - `gmail_send` — sends or replies to email via SMTP (supports In-Reply-To threading)
 - `gmail_mark_read` — marks one or more emails as read by UID (batch support)
+- `edit_skill` — creates or edits an instruction skill with copy-on-write to `user_skills/`. Supports `mode='write'` (full content) and `mode='edit'` (search-and-replace). For built-in skills, automatically copies to `user_skills/` before editing
 
 ### Instruction Skills (Markdown files)
 
-Instruction skills are pure Markdown files in `skills/` that teach the LLM workflows without writing Python code. They guide the LLM on *when and how* to combine existing tools for specific tasks.
+Instruction skills are pure Markdown files that teach the LLM workflows without writing Python code. They guide the LLM on *when and how* to combine existing tools for specific tasks.
+
+Two directories are scanned:
+- **`skills/`** — built-in skills, git-tracked, updated on `git pull`
+- **`user_skills/`** — user overrides, gitignored, never touched by upgrades
+
+When both contain a skill with the same `name`, the user version wins. This lets users customize built-in skills without merge conflicts on upgrade.
 
 File format — YAML frontmatter + Markdown body:
 ```yaml
@@ -205,7 +216,11 @@ requires:            # optional eligibility gating
 Instructions for the LLM describing the workflow…
 ```
 
-To add a new instruction skill: create a directory in `skills/` with a `SKILL.md` file (e.g. `skills/daily_report/SKILL.md`). No Python, no imports. The skill loader (`agent/skill_loader.py`) discovers it automatically.
+To add a new instruction skill: create a directory in `skills/` (built-in) or `user_skills/` (personal) with a `SKILL.md` file. No Python, no imports. The skill loader discovers it automatically.
+
+To customize a built-in skill manually: copy its directory to `user_skills/` (e.g. `cp -r skills/heartbeat user_skills/heartbeat`), then edit the copy.
+
+The LLM modifies skills via the `edit_skill` tool (not `edit_file`), which handles copy-on-write to `user_skills/` automatically — built-in `skills/` files are never modified by the agent.
 
 - Only skill meta (name, description, path) is injected into the system prompt — the LLM uses `read_file` to load full instructions on demand
 - Skills with unmet `requires` are silently skipped
@@ -240,6 +255,16 @@ The `openai-codex` provider allows running inkagent using a **ChatGPT Plus/Pro s
 - **Login**: `python -m agent.codex_auth` opens a browser for one-time OAuth consent
 - **No API key needed** — authentication uses the ChatGPT subscription session
 - **Limitations**: subject to ChatGPT subscription usage quotas; no embeddings (vector search still needs `OPENAI_API_KEY`)
+
+## File Safety
+
+The agent's `write_file` and `edit_file` tools enforce a path allowlist for writes within the project directory:
+- **Writable**: `memory/`, `conversations/`, `user_skills/`
+- **Read-only**: all other project files (`agent/`, `tools/`, `skills/`, `main.py`, `bot.py`, etc.)
+- **Outside the project**: no restrictions — the agent can freely read and write external files
+- **Always blocked**: `.db` / `.sqlite` files (managed databases)
+
+This is enforced at the tool level (`_check_writable` in `tools/files.py`). The system prompt also instructs the LLM not to use `run_shell` to bypass these restrictions (soft limit).
 
 ## Code Style
 

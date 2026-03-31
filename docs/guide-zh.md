@@ -65,18 +65,24 @@ docker build -t inkagent .
 docker run -it --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
-  -v $(pwd)/skills:/app/skills \
+  -v $(pwd)/user_skills:/app/user_skills \
   inkagent
 
 # Telegram 机器人模式
 docker run --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
-  -v $(pwd)/skills:/app/skills \
+  -v $(pwd)/user_skills:/app/user_skills \
   inkagent python bot.py
 ```
 
-挂载 `memory/`、`conversations/` 和 `skills/` 目录，数据在容器重启后不会丢失。`skills/` 挂载后你可以在宿主机上添加或下载新技能，容器内立即生效。
+挂载 `memory/`、`conversations/` 和 `user_skills/` 目录，数据在容器重启后不会丢失。`user_skills/` 挂载后你可以在宿主机上添加或自定义技能，容器内立即生效。
+
+### 文件安全
+
+在项目目录内，agent 只能写入 `memory/`、`conversations/` 和 `user_skills/`。项目中的其他文件（源代码、配置等）对 agent 是只读的。项目目录外的文件不受限制。
+
+这在 `write_file` 和 `edit_file` 工具层面做了硬限制。`run_shell` 工具没有硬限制，但系统提示中要求 agent 不通过它绕过写入限制。
 
 ### 验证
 
@@ -440,17 +446,24 @@ agent 会创建一个 `silent_ok=true` 的 cron 任务。当没有需要注意�
 
 通过 Markdown 文件教 agent 新的工作流程，不需要写代码。技能指导 agent 如何组合现有工具完成特定任务。
 
-**创建步骤：**
+inkagent 使用两个技能目录：
 
-1. 在 `skills/` 下创建目录和 `SKILL.md` 文件：
+- **`skills/`** — 内置技能，随代码版本管理，`git pull` 时更新
+- **`user_skills/`** — 用户自定义或覆盖的技能，已 gitignore，升级不受影响
+
+当两个目录中存在同名技能时，用户版本优先。
+
+### 创建新技能
+
+在 `user_skills/` 下创建目录和 `SKILL.md` 文件：
 
 ```
-skills/
+user_skills/
 └── daily_report/
     └── SKILL.md
 ```
 
-2. 编写 `SKILL.md`：
+编写 `SKILL.md`：
 
 ```yaml
 ---
@@ -467,7 +480,24 @@ description: 生成当日工作总结
 
 放好文件后，agent 下次启动自动发现。agent 在系统提示中看到技能名称和描述，需要时用 `read_file` 加载完整指令。
 
-**条件加载：**
+### 自定义内置技能
+
+**通过对话修改**（推荐）：直接告诉 agent 你想改什么。agent 使用 `edit_skill` 工具，会自动将内置技能复制到 `user_skills/` 后再编辑（copy-on-write），`skills/` 中的原始文件不会被修改。
+
+```
+你> 把心跳检查的安静时段改成 22:00-07:00
+```
+
+**手动修改**：复制技能目录后编辑副本：
+
+```bash
+cp -r skills/heartbeat user_skills/heartbeat
+# 编辑 user_skills/heartbeat/SKILL.md
+```
+
+用户版本通过 `name` 字段匹配来覆盖内置版本。
+
+### 条件加载
 
 可以在 frontmatter 中用 `requires` 指定前置条件。不满足时技能会被静默跳过：
 
