@@ -39,7 +39,8 @@ inkagent/
 │   ├── web_search.py    # web_search tool (Brave Search API)
 │   ├── web_fetch.py     # web_fetch tool (HTTP + trafilatura)
 │   ├── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
-│   └── skill_edit.py    # edit_skill tool (copy-on-write to user_skills/)
+│   ├── skill_edit.py    # edit_skill tool (copy-on-write to user_skills/)
+│   └── tasks.py         # add_task, list_tasks, update_task tools (autopilot task queue)
 ├── skills/              # Built-in instruction skills (git-tracked)
 │   └── skill_name/      # One directory per skill
 │       └── SKILL.md     # YAML frontmatter + Markdown body
@@ -51,6 +52,7 @@ inkagent/
     ├── SOUL.md          # Agent behavioral rules (core truths, boundaries, tone, continuity)
     ├── USER.md          # User personal info (name, role, interests)
     ├── MEMORY.md        # Long-term memory (curated, durable)
+    ├── TASKS.md         # Autopilot task queue (auto-seeded on first access)
     └── daily/           # Daily logs (ephemeral, append-only)
         └── YYYY-MM-DD.md
 ```
@@ -112,6 +114,7 @@ Four-tier Markdown memory in `memory/`:
 - **`SOUL.md`** — Agent behavioral rules (core truths, boundaries, tone, continuity). Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (tone, language, boundaries).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
 - **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Auto-seeded with a `# MEMORY.md` header template on first access. Writable via `save_memory` tool (for explicit "remember this" requests) and via the automatic promotion system.
+- **`TASKS.md`** — Autopilot task queue. Not injected into system prompt (to save tokens). Auto-seeded with a template on first access. Managed via `add_task`, `list_tasks`, `update_task` tools. Tasks are executed automatically by the heartbeat cron cycle via the autopilot skill.
 - **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). Each entry is also indexed into the vector store for semantic search.
 - **`memory.db`** — sqlite-vec database for semantic search over daily logs. Auto-created when an embedding provider is available. Not required — system degrades to keyword search without it.
 
@@ -144,6 +147,17 @@ Heartbeat is a special use of the cron system for periodic background checks (em
 - **`silent_ok` flag on cron jobs** — When set, replies of `HEARTBEAT_OK` are swallowed silently
 
 Setup: create a cron job with `silent_ok=true` whose prompt tells the agent to run the heartbeat skill. The agent reads the checklist, runs the checks, and either reports findings or replies `HEARTBEAT_OK` to stay silent.
+
+### Autopilot
+
+Autopilot enables the agent to autonomously execute tasks from a queue without user prompting. It is integrated into the heartbeat cycle — each heartbeat trigger checks `memory/TASKS.md` for pending tasks and executes them.
+
+Components:
+- **`memory/TASKS.md`** — Task queue file (auto-seeded on first access). Tasks have four status markers: `[ ]` pending, `[~]` in progress, `[x]` completed, `[!]` blocked
+- **`skills/autopilot/SKILL.md`** — Instruction skill teaching the agent the autopilot workflow (read tasks, pick highest priority, execute, update status, log results)
+- **`tools/tasks.py`** — `add_task`, `list_tasks`, `update_task` tools for managing the task queue
+
+The heartbeat skill checks for pending autopilot tasks before running its regular checklist. When a task is found, the agent reads the autopilot skill instructions, works on the task (creating a git branch, making changes, running tests), updates the task status, and logs results to the daily log. No separate cron job is needed.
 
 ## Session Control Commands
 
@@ -192,6 +206,9 @@ Built-in tools:
 - `gmail_send` — sends or replies to email via SMTP (supports In-Reply-To threading)
 - `gmail_mark_read` — marks one or more emails as read by UID (batch support)
 - `edit_skill` — creates or edits an instruction skill with copy-on-write to `user_skills/`. Supports `mode='write'` (full content) and `mode='edit'` (search-and-replace). For built-in skills, automatically copies to `user_skills/` before editing
+- `add_task` — adds a task to the autopilot queue (`memory/TASKS.md`) with description, priority, project path, and context
+- `list_tasks` — lists tasks from the autopilot queue, optionally filtered by status (pending, in_progress, completed, blocked)
+- `update_task` — updates a task's status (pending, in_progress, completed, blocked) with an optional note
 
 ### Instruction Skills (Markdown files)
 
@@ -281,3 +298,4 @@ This is enforced at the tool level (`_check_writable` in `tools/files.py`). The 
 3. ~~Scheduled tasks~~ — cron scheduler (`croniter` + asyncio), `create_cron` / `list_crons` / `delete_cron` tools
 4. ~~Web search tool~~ — `web_search` (Brave) + `web_fetch` (trafilatura)
 5. ~~Gmail~~ — `gmail_search`, `gmail_read`, `gmail_send` tools (IMAP/SMTP + App Password)
+6. ~~Autopilot~~ — autonomous task execution via heartbeat + TASKS.md + autopilot skill

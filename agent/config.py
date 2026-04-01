@@ -23,6 +23,7 @@ SOUL_PATH = os.path.join(MEMORY_DIR, "SOUL.md")
 USER_PATH = os.path.join(MEMORY_DIR, "USER.md")
 LONG_TERM_PATH = os.path.join(MEMORY_DIR, "MEMORY.md")
 HEARTBEAT_PATH = os.path.join(MEMORY_DIR, "HEARTBEAT.md")
+TASKS_PATH = os.path.join(MEMORY_DIR, "TASKS.md")
 DB_PATH = os.path.join(MEMORY_DIR, "memory.db")
 
 # Skills directories
@@ -36,7 +37,7 @@ WRITABLE_DIRS = ("memory", "conversations", "user_skills")
 # LLM generation
 # ---------------------------------------------------------------------------
 MAX_REPLY_TOKENS = 4096  # max tokens per LLM response
-MAX_TOOL_ROUNDS = 10  # max tool-use loop iterations per agent turn
+MAX_TOOL_ROUNDS = 30  # max tool-use loop iterations per agent turn
 
 # Context window management
 MAX_CONTEXT_TOKENS = 200_000

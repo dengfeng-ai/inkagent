@@ -11,23 +11,28 @@ When triggered as a heartbeat job, follow this workflow:
 
 Read `memory/HEARTBEAT.md`. This file contains a user-maintained checklist of things to check (e.g. unread emails, upcoming events). If the file doesn't exist or is empty, reply with `HEARTBEAT_OK`.
 
-## 2. Run checks
+## 2. Check autopilot tasks
+
+Read `memory/TASKS.md`. If there are pending tasks (`- [ ]`) or in-progress tasks (`- [~]`), execute the autopilot skill (read `skills/autopilot/SKILL.md` for instructions). After autopilot completes, continue with the remaining checklist checks below.
+
+## 3. Run checklist checks
 
 Go through the checklist items. Use the appropriate tools (gmail_search, web_search, web_fetch, etc.) to perform each check. Note anything that needs the user's attention.
 
-## 3. Decide whether to notify
+## 4. Decide whether to notify
 
 **Notify the user** (reply with a concise summary) when:
 - An important or urgent email arrived
 - An upcoming event is within 2 hours
 - Something noteworthy was found in any check
+- An autopilot task was completed or is blocked
 
 **Stay silent** (reply with exactly `HEARTBEAT_OK`) when:
 - Nothing new or important
+- No pending autopilot tasks and all checks came back empty
 - It's late night (23:00–08:00 local time) and nothing is urgent
-- All checks came back empty
 
-## 4. Quiet hours
+## 5. Quiet hours
 
 Respect quiet hours (23:00–08:00 local time). During quiet hours, only notify for genuinely urgent items. Otherwise reply `HEARTBEAT_OK`.
 
