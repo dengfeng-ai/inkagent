@@ -291,6 +291,96 @@ The agent's `write_file` and `edit_file` tools enforce a path allowlist for writ
 
 This is enforced at the tool level (`_check_writable` in `inkagent/tools/files.py`). The system prompt also instructs the LLM not to use `run_shell` to bypass these restrictions (soft limit).
 
+## Testing
+
+### Run Tests
+
+```bash
+pytest                      # all tests
+pytest tests/test_memory.py # single file
+pytest -x                   # stop on first failure
+```
+
+### Strategy
+
+This is an IO-heavy glue project — most code interfaces with external services (LLM APIs, Telegram, Gmail, filesystem). The testing strategy prioritizes layers by ROI:
+
+**Layer 1 — Pure logic unit tests (highest ROI, test first)**
+
+Modules with clear input/output and no external dependencies. Use `tmp_path` to isolate the filesystem.
+
+| Module | What to test |
+|---|---|
+| `memory.py` | Read/write memory files, daily log append, template seeding, promotion marker, keyword search |
+| `session.py` | Conversation history CRUD, JSON persistence, reset |
+| `compression.py` | Token estimation, message truncation logic |
+| `telegram_format.py` | Markdown → Telegram HTML conversion |
+| `skill_loader.py` | YAML frontmatter parsing, skill discovery, user_skills override priority |
+| `registry.py` | Tool registration, schema validation, duplicate handling |
+| `tools/files.py` | Path guard `_check_writable` (already tested) |
+| `tools/tasks.py` | Task parsing, status update, auto-archiving |
+
+**Layer 2 — Interface contract tests (mock external dependencies)**
+
+| Module | What to test |
+|---|---|
+| `brain.py` | Agentic loop control flow: end_turn in one call, tool_use → execute → end_turn, MAX_TOOL_ROUNDS forces text |
+| `bot.py` | Telegram handler routing (already tested) |
+| `scheduler.py` | Cron trigger logic, job persistence, timezone handling |
+| `providers/*.py` | `format_tools()`, `assistant_message()`, `tool_results_messages()` output format |
+
+**Layer 3 — Integration smoke tests (optional, CI with API keys)**
+
+Mark with `@pytest.mark.slow`, skip by default. Verify "send message → get reply" end-to-end with a real LLM.
+
+### Conventions
+
+- **Test behavior, not implementation** — assert on outputs and side effects, not internal calls
+- **Isolate the filesystem with `tmp_path`** — monkeypatch path constants to point at `tmp_path`. Paths need to be patched in **both** `inkagent.config` and in modules that import them at module level (e.g. `inkagent.memory.MEMORY_DIR`, `inkagent.session.CONVERSATIONS_DIR`, `inkagent.skill_loader.BUILTIN_SKILLS_DIR`)
+- **Clean up module-level global state between tests** — several modules use global dicts/lists: `registry._skills`, `session._sessions` + `session._session_files`, `scheduler._jobs`. Use fixtures that save/restore or clear these between tests
+- **Mock at the outermost boundary** — mock LLM HTTP calls and external APIs, not internal functions
+- **Langfuse tracing** — `tracing.py` already returns no-op decorators and a silent stub when `LANGFUSE_PUBLIC_KEY` is unset. No fixture needed — just don't set the env var in tests
+- **Vector store** — `recall_memory` and `append_daily_log` lazy-import `vector_store` with try/except fallback. No special handling needed in tests — they degrade to keyword search naturally
+- **No API keys required** — all Layer 1 and Layer 2 tests must run without any env vars. Tests requiring keys use `@pytest.mark.slow`
+
+### conftest.py Fixtures
+
+- **`tmp_memory_dir`** — creates `memory/`, `memory/daily/`, `conversations/` under `tmp_path`; monkeypatches all path constants in `inkagent.config` AND in consumer modules (`inkagent.memory`, `inkagent.session`, `inkagent.skill_loader`, `inkagent.scheduler`)
+- **`clean_registry`** — saves and restores `registry._skills` around each test
+- **`clean_session`** — clears `session._sessions` and `session._session_files` after each test
+
+### Implementation Order
+
+Each step is independently runnable and committable:
+
+1. **`conftest.py` + `test_telegram_format.py`** — set up shared fixtures; start with the zero-dependency pure function module
+2. **`test_registry.py`** — register/call/truncation/error handling
+3. **`test_memory.py`** — template seeding, read/write, daily log, promotion marker, keyword search
+4. **`test_session.py`** — conversation CRUD, JSON persistence, reset, inject
+5. **`test_compression.py`** — `estimate_tokens` pure logic; `maybe_compress`/`force_compress` with mocked `_summarize_messages`
+6. **`test_skill_loader.py`** — frontmatter parsing, requirements gating, user override priority
+7. **`test_tasks.py`** — add/list/update/archive (depends on memory fixture)
+8. **`test_scheduler.py`** — job CRUD + persistence; async `run_scheduler` can be deferred
+9. **`test_brain.py`** — agentic loop with fake provider: direct end_turn, tool_use loop, MAX_TOOL_ROUNDS cap
+
+### File Layout
+
+```
+tests/
+├── conftest.py              # Shared fixtures: tmp memory dir, clean_registry, clean_session
+├── test_bot.py              # ✅ exists
+├── test_file_guard.py       # ✅ exists
+├── test_telegram_format.py  # format conversion (pure functions)
+├── test_registry.py         # tool registration
+├── test_memory.py           # memory read/write/promotion
+├── test_session.py          # conversation management
+├── test_compression.py      # token estimation, truncation
+├── test_skill_loader.py     # skill discovery & priority
+├── test_tasks.py            # task parsing & archiving
+├── test_scheduler.py        # cron job CRUD & trigger logic
+└── test_brain.py            # agentic loop (mock provider)
+```
+
 ## Code Style
 
 - Type hints on all function signatures
