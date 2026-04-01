@@ -35,6 +35,7 @@
 - **自注册工具** — Shell、文件操作、网页搜索、Gmail、定时任务等
 - **指令技能** — 用一个 Markdown 文件教会 Agent 新工作流，无需写代码
 - **定时任务与心跳** — 基于 cron 的调度器，支持主动通知；心跳模式用于静默后台检查
+- **自动驾驶** — 自主任务队列，Agent 在每次心跳周期中自动领取、执行和归档任务
 - **双界面** — CLI (`main.py`) 或 Telegram 机器人 (`bot.py`)
 - **可观测性** — 可选 [Langfuse](https://langfuse.com) 追踪所有 LLM 调用和工具执行
 
@@ -110,6 +111,7 @@ Telegram 机器人、多模型配置、Gmail、网页搜索、定时任务等更
 - [x] 指令技能 — 基于 Markdown 的工作流定义，与工具分离
 - [x] Gmail 工具（IMAP/SMTP + App Password）
 - [x] 心跳 — 定期主动检查（读取 `HEARTBEAT.md` 清单，有事才通知）
+- [x] 自动驾驶 — 自主任务队列，支持自动归档
 - [ ] 发布到 PyPI
 
 ## 许可证

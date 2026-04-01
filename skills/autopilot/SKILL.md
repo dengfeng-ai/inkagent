@@ -33,10 +33,11 @@ Before executing, evaluate if the task is too large for a single cycle.
 
 ## 4. Understand the task
 
-Read the task's context. If a `project` path is specified:
-- Use `list_directory` and `read_file` to understand the project structure
-- Read relevant source files to understand the codebase
+Read the task's context. If a `repo` is specified:
+- Clone or navigate to the repo
+- Use `list_directory` and `read_file` to understand the codebase
 - Check for existing tests, README, or documentation
+- Use the `github-pr` skill to create PRs for code changes
 
 If resuming an in-progress task (`[~]`), read the `progress` note to understand what's already done.
 
@@ -103,20 +104,25 @@ _Autonomous task queue. Agent picks and executes tasks on each autopilot cycle._
 ## Tasks
 
 - [ ] Task description (priority: high)
-  - project: /path/to/project
+  - created: 2026-04-01
+  - repo: owner/repo
   - context: Additional context, requirements, or constraints
-  - branch: autopilot/task-id (filled by agent when work starts)
 
 - [~] In-progress task (priority: medium)
-  - project: /path/to/project
+  - created: 2026-03-30
+  - repo: owner/repo
   - context: What needs to be done
+  - updated: 2026-04-01
   - progress: What's been done so far
 
 - [x] Completed task (priority: low)
+  - created: 2026-03-28
   - completed: 2026-04-01
   - result: Brief summary of what was done
 
 - [!] Blocked task (priority: high)
+  - created: 2026-03-29
+  - updated: 2026-04-01
   - blocker: Description of what's blocking this task
 ```
 
@@ -125,3 +131,7 @@ Status markers:
 - `[~]` — in progress
 - `[x]` — completed
 - `[!]` — blocked, needs user input
+
+## Auto-archiving
+
+Completed tasks are automatically archived after 3 days. When `list_tasks` or `add_task` runs, any `[x]` task with a `completed:` date older than 3 days is moved to `memory/tasks_archive/YYYY-MM.md`. This keeps TASKS.md focused on active work.

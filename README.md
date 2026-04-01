@@ -36,6 +36,7 @@
 - **Self-registering tools** — shell, file ops, web search, Gmail, cron, and more
 - **Instruction skills** — teach the agent new workflows with just a Markdown file, no code needed
 - **Scheduled tasks & heartbeat** — cron-based scheduler for proactive notifications; heartbeat mode for silent background checks
+- **Autopilot** — autonomous task queue; agent picks, executes, and archives tasks on each heartbeat cycle
 - **Two interfaces** — CLI (`main.py`) or Telegram bot (`bot.py`)
 - **Observability** — optional [Langfuse](https://langfuse.com) tracing for all LLM calls and tool executions
 
@@ -111,6 +112,7 @@ Key design: `brain.py` has zero knowledge of individual tools or skills. Tools r
 - [x] Instruction skills — Markdown-based workflow definitions, separated from tools
 - [x] Gmail tools (IMAP/SMTP + App Password)
 - [x] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
+- [x] Autopilot — autonomous task queue with auto-archiving
 - [ ] Publish to PyPI
 
 ## License

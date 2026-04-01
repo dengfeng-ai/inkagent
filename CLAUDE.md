@@ -55,6 +55,8 @@ project root/
 │   ├── USER.md
 │   ├── MEMORY.md
 │   ├── TASKS.md
+│   ├── tasks_archive/       # Auto-archived completed tasks
+│   │   └── YYYY-MM.md
 │   └── daily/
 │       └── YYYY-MM-DD.md
 ├── pyproject.toml           # Package metadata + dependencies
@@ -120,7 +122,7 @@ Four-tier Markdown memory in `memory/`:
 - **`SOUL.md`** — Agent behavioral rules (core truths, boundaries, tone, continuity). Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (tone, language, boundaries).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
 - **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Auto-seeded with a `# MEMORY.md` header template on first access. Writable via `save_memory` tool (for explicit "remember this" requests) and via the automatic promotion system.
-- **`TASKS.md`** — Autopilot task queue. Not injected into system prompt (to save tokens). Auto-seeded with a template on first access. Managed via `add_task`, `list_tasks`, `update_task` tools. Tasks are executed automatically by the heartbeat cron cycle via the autopilot skill.
+- **`TASKS.md`** — Autopilot task queue. Not injected into system prompt (to save tokens). Auto-seeded with a template on first access. Managed via `add_task`, `list_tasks`, `update_task` tools. Tasks are executed automatically by the heartbeat cron cycle via the autopilot skill. Completed tasks (`[x]`) are auto-archived to `memory/tasks_archive/YYYY-MM.md` after 3 days — triggered automatically when `list_tasks` or `add_task` runs.
 - **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). Each entry is also indexed into the vector store for semantic search.
 - **`memory.db`** — sqlite-vec database for semantic search over daily logs. Auto-created when an embedding provider is available. Not required — system degrades to keyword search without it.
 
@@ -159,11 +161,11 @@ Setup: create a cron job with `silent_ok=true` whose prompt tells the agent to r
 Autopilot enables the agent to autonomously execute tasks from a queue without user prompting. It is integrated into the heartbeat cycle — each heartbeat trigger checks `memory/TASKS.md` for pending tasks and executes them.
 
 Components:
-- **`memory/TASKS.md`** — Task queue file (auto-seeded on first access). Tasks have four status markers: `[ ]` pending, `[~]` in progress, `[x]` completed, `[!]` blocked
+- **`memory/TASKS.md`** — Task queue file (auto-seeded on first access). Tasks have four status markers: `[ ]` pending, `[~]` in progress, `[x]` completed, `[!]` blocked. Each task tracks timestamps (`created`, `updated`, `completed`). Completed tasks are auto-archived to `memory/tasks_archive/YYYY-MM.md` after 3 days
 - **`skills/autopilot/SKILL.md`** — Instruction skill teaching the agent the autopilot workflow (read tasks, pick highest priority, execute, update status, log results)
 - **`inkagent/tools/tasks.py`** — `add_task`, `list_tasks`, `update_task` tools for managing the task queue
 
-The heartbeat skill checks for pending autopilot tasks before running its regular checklist. When a task is found, the agent reads the autopilot skill instructions, works on the task (creating a git branch, making changes, running tests), updates the task status, and logs results to the daily log. No separate cron job is needed.
+The heartbeat skill checks for pending autopilot tasks before running its regular checklist. When a task is found, the agent reads the autopilot skill instructions, works on the task (using the `github-pr` skill for repo tasks), updates the task status, and logs results to the daily log. No separate cron job is needed.
 
 ## Session Control Commands
 
@@ -212,9 +214,9 @@ Built-in tools:
 - `gmail_send` — sends or replies to email via SMTP (supports In-Reply-To threading)
 - `gmail_mark_read` — marks one or more emails as read by UID (batch support)
 - `edit_skill` — creates or edits an instruction skill with copy-on-write to `user_skills/`. Supports `mode='write'` (full content) and `mode='edit'` (search-and-replace). For built-in skills, automatically copies to `user_skills/` before editing
-- `add_task` — adds a task to the autopilot queue (`memory/TASKS.md`) with description, priority, project path, and context
-- `list_tasks` — lists tasks from the autopilot queue, optionally filtered by status (pending, in_progress, completed, blocked)
-- `update_task` — updates a task's status (pending, in_progress, completed, blocked) with an optional note
+- `add_task` — adds a task to the autopilot queue (`memory/TASKS.md`) with description, priority, repo (owner/repo), and context. Auto-adds `created: YYYY-MM-DD`
+- `list_tasks` — lists tasks from the autopilot queue, optionally filtered by status (pending, in_progress, completed, blocked). Triggers auto-archiving of old completed tasks
+- `update_task` — updates a task's status (pending, in_progress, completed, blocked) with an optional note. Auto-adds `completed: YYYY-MM-DD` for completed tasks, `updated: YYYY-MM-DD` for other status changes
 
 ### Instruction Skills (Markdown files)
 
