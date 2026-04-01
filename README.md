@@ -105,6 +105,7 @@ Key design: `brain.py` has zero knowledge of individual tools or skills. Tools r
 - [x] Instruction skills — Markdown-based workflow definitions, separated from tools
 - [x] Gmail tools (IMAP/SMTP + App Password)
 - [x] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
+- [ ] Publish to PyPI
 
 ## License
 
