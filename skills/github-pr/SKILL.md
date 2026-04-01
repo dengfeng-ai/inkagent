@@ -196,12 +196,19 @@ After creation, print the PR URL for the user.
 
 ---
 
-### Step 7: Clean Up
+### Step 7: Clean Up (MANDATORY — do NOT skip)
 
-Delete the isolated working directory — it's no longer needed:
+**You MUST delete the working directory after creating or updating the PR.** This step is not optional.
+
+Since `$WORK_DIR` does not persist across shell calls, use the actual path you cloned into (e.g. `~/.inkagent/repos/inkagent-a3f2c1d`):
 
 ```bash
-rm -rf "$WORK_DIR"
+rm -rf <actual-work-dir-path>
+```
+
+Verify it's gone:
+```bash
+ls <actual-work-dir-path> 2>&1 || echo "Clean up successful"
 ```
 
 > The remote feature branch is kept alive for the open PR. It will be deleted after merge.
