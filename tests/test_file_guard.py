@@ -2,7 +2,7 @@
 
 import pytest
 
-from tools.files import _check_writable
+from inkagent.tools.files import _check_writable
 
 
 class TestCheckWritable:
@@ -33,12 +33,10 @@ class TestCheckWritable:
     # --- blocked: other project dirs ---
 
     @pytest.mark.parametrize("path", [
-        "agent/brain.py",
-        "tools/files.py",
+        "inkagent/brain.py",
+        "inkagent/tools/files.py",
         "skills/heartbeat/SKILL.md",
-        "main.py",
-        "bot.py",
-        "requirements.txt",
+        "pyproject.toml",
         ".env",
     ])
     def test_blocked_project_paths(self, path):

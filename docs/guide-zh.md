@@ -31,7 +31,7 @@ git clone https://github.com/dengfeng-ai/inkagent
 cd inkagent
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ### 最简配置
@@ -49,7 +49,7 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
 ### 启动
 
 ```bash
-python main.py
+python -m inkagent
 ```
 
 看到提示符后输入消息即可开始对话。agent 会自动使用工具、管理记忆。
@@ -73,7 +73,7 @@ docker run --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
   -v $(pwd)/user_skills:/app/user_skills \
-  inkagent python bot.py
+  inkagent python -m inkagent.bot
 ```
 
 挂载 `memory/`、`conversations/` 和 `user_skills/` 目录，数据在容器重启后不会丢失。`user_skills/` 挂载后你可以在宿主机上添加或自定义技能，容器内立即生效。
@@ -131,7 +131,7 @@ LLM_PROVIDER=openai
 **第一步：登录授权（一次性）**
 
 ```bash
-python -m agent.codex_auth
+python -m inkagent.codex_auth
 ```
 
 浏览器会自动打开 OpenAI 授权页面。授权后 token 保存在 `~/.inkagent/codex-auth.json`，之后自动刷新。
@@ -150,7 +150,7 @@ LLM_PROVIDER=openai-codex
 **查看登录状态：**
 
 ```bash
-python -m agent.codex_auth status
+python -m inkagent.codex_auth status
 ```
 
 **注意：** Codex 模式受 ChatGPT 订阅用量限制；不支持 embedding，记忆搜索仍需设置 `OPENAI_API_KEY`。
@@ -251,7 +251,7 @@ TELEGRAM_OWNER_ID=987654321
 **第四步：启动**
 
 ```bash
-python bot.py
+python -m inkagent.bot
 ```
 
 ### 验证

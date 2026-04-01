@@ -31,7 +31,7 @@ git clone https://github.com/dengfeng-ai/inkagent
 cd inkagent
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ### Minimal Configuration
@@ -49,7 +49,7 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
 ### Launch
 
 ```bash
-python main.py
+python -m inkagent
 ```
 
 Once you see the prompt, type a message to start chatting. The agent will automatically use tools and manage memory.
@@ -73,7 +73,7 @@ docker run --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
   -v $(pwd)/user_skills:/app/user_skills \
-  inkagent python bot.py
+  inkagent python -m inkagent.bot
 ```
 
 Mount `memory/`, `conversations/`, and `user_skills/` to persist data across container restarts. With `user_skills/` mounted, you can add or customize skills on the host and they take effect immediately inside the container.
@@ -131,7 +131,7 @@ Run with a ChatGPT Plus/Pro subscription — no API key needed, no extra charges
 **Step 1: Authenticate (one-time)**
 
 ```bash
-python -m agent.codex_auth
+python -m inkagent.codex_auth
 ```
 
 A browser window will open to the OpenAI authorization page. After authorizing, the token is saved to `~/.inkagent/codex-auth.json` and refreshed automatically.
@@ -150,7 +150,7 @@ LLM_PROVIDER=openai-codex
 **Check login status:**
 
 ```bash
-python -m agent.codex_auth status
+python -m inkagent.codex_auth status
 ```
 
 **Note:** Codex mode is subject to ChatGPT subscription usage limits. It does not support embeddings — memory search still requires `OPENAI_API_KEY`.
@@ -251,7 +251,7 @@ TELEGRAM_OWNER_ID=987654321
 **Step 4: Launch**
 
 ```bash
-python bot.py
+python -m inkagent.bot
 ```
 
 ### Verify

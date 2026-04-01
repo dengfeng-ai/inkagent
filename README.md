@@ -72,8 +72,8 @@ Requires **Python 3.11+**.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-python main.py
+pip install -e .
+python -m inkagent
 ```
 
 For Telegram bot, provider options, Gmail, web search, scheduled tasks, and more — see the [User Guide](docs/guide-en.md).
@@ -81,30 +81,19 @@ For Telegram bot, provider options, Gmail, web search, scheduled tasks, and more
 ## Architecture
 
 ```
-inkagent/
-├── main.py              # CLI entry point
-├── bot.py               # Telegram bot entry point
-├── agent/
+project root/
+├── inkagent/            # Python package
+│   ├── cli.py           # CLI entry point
+│   ├── bot.py           # Telegram bot entry point
 │   ├── brain.py         # Agentic loop (provider-agnostic)
-│   ├── config.py        # Shared constants (limits, timeouts)
+│   ├── config.py        # Shared constants
 │   ├── memory.py        # Markdown memory (read/write)
-│   ├── registry.py      # Tool registration
-│   ├── skill_loader.py  # Markdown skill loader (built-in + user override)
-│   ├── prompts.py       # Prompt templates
-│   ├── session.py       # Conversation history + persistence
-│   ├── compression.py   # Context window compression
-│   ├── promotion.py     # Daily log → long-term memory promotion
-│   ├── scheduler.py     # Cron scheduler (asyncio + croniter)
-│   ├── vector_store.py  # sqlite-vec vector store for memory search
-│   └── providers/       # Pluggable LLM providers
-│       ├── base.py      # LLMProvider ABC + shared types
-│       ├── anthropic.py # Anthropic (Claude)
-│       ├── openai.py    # OpenAI
-│       └── openai_codex.py # OpenAI Codex (ChatGPT subscription)
-├── tools/               # Self-registering Python tools
+│   ├── providers/       # Pluggable LLM providers
+│   └── tools/           # Self-registering Python tools
 ├── skills/              # Built-in instruction skills (git-tracked)
 ├── user_skills/         # User skill overrides (gitignored)
-└── memory/              # All memory (gitignored)
+├── memory/              # All memory (gitignored)
+└── pyproject.toml       # Package metadata + dependencies
 ```
 
 Key design: `brain.py` has zero knowledge of individual tools or skills. Tools register via `@registry.register(...)`, instruction skills are auto-discovered from `skills/` and `user_skills/` — adding either never touches core code. User skills in `user_skills/` override built-in ones with the same name, so upgrades via `git pull` never conflict with customizations.

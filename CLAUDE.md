@@ -6,55 +6,59 @@ Inspired by OpenClaw. Built in Python.
 ## Architecture
 
 ```
-inkagent/
-├── main.py              # CLI entry point
-├── bot.py               # Telegram bot entry point
-├── agent/
-│   ├── brain.py         # LLM agentic loop (tool_use) — provider-agnostic
-│   ├── config.py        # Shared constants (token limits, timeouts, caps)
-│   ├── memory.py        # Markdown-based memory (read/write)
-│   ├── registry.py      # Tool registration system (Python tools)
-│   ├── skill_loader.py  # Markdown skill loader (built-in + user override)
-│   ├── prompts.py       # Prompt templates (system, promotion, summary)
-│   ├── session.py       # Conversation history management + JSON persistence
-│   ├── compression.py   # Context window estimation + small-model summarization
-│   ├── promotion.py     # Daily log → MEMORY.md promotion via LLM
-│   ├── scheduler.py     # Cron scheduler (asyncio loop + croniter)
-│   ├── telegram_format.py # Markdown → Telegram HTML converter
-│   ├── vector_store.py  # sqlite-vec vector store for semantic search over daily logs
-│   ├── codex_auth.py    # OAuth 2.0 + PKCE auth for OpenAI Codex (ChatGPT subscription)
-│   └── providers/       # Pluggable LLM provider abstraction
-│       ├── __init__.py  # Factory: get_provider(), get_model(), get_small_model()
-│       ├── base.py      # LLMProvider ABC + LLMResponse/ToolCall/LLMError types
-│       ├── anthropic.py # Anthropic (Claude) provider
-│       ├── openai.py    # OpenAI provider
-│       └── openai_codex.py # OpenAI Codex provider (ChatGPT subscription via OAuth)
-├── tools/
-│   ├── __init__.py      # Auto-imports all tools so they self-register
-│   ├── shell.py         # run_shell tool
-│   ├── files.py         # read_file, write_file, edit_file, list_directory tools (write/edit block .db files)
-│   ├── profile.py       # update_identity + update_soul + update_user_profile tools
-│   ├── memory_skill.py  # recall_memory, log_daily, save_memory tools
-│   ├── cron.py          # create_cron, list_crons, delete_cron tools
-│   ├── web_search.py    # web_search tool (Brave Search API)
-│   ├── web_fetch.py     # web_fetch tool (HTTP + trafilatura)
-│   ├── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
-│   ├── skill_edit.py    # edit_skill tool (copy-on-write to user_skills/)
-│   └── tasks.py         # add_task, list_tasks, update_task tools (autopilot task queue)
-├── skills/              # Built-in instruction skills (git-tracked)
-│   └── skill_name/      # One directory per skill
-│       └── SKILL.md     # YAML frontmatter + Markdown body
-├── user_skills/         # User skill overrides (gitignored, same structure as skills/)
-│   └── skill_name/      # Same name as built-in skill to override it
+project root/
+├── inkagent/                # Python package
+│   ├── __init__.py
+│   ├── __main__.py          # python -m inkagent
+│   ├── cli.py               # CLI entry point
+│   ├── bot.py               # Telegram bot entry point
+│   ├── brain.py             # LLM agentic loop (tool_use) — provider-agnostic
+│   ├── config.py            # Shared constants (token limits, timeouts, caps)
+│   ├── memory.py            # Markdown-based memory (read/write)
+│   ├── registry.py          # Tool registration system (Python tools)
+│   ├── skill_loader.py      # Markdown skill loader (built-in + user override)
+│   ├── prompts.py           # Prompt templates (system, promotion, summary)
+│   ├── session.py           # Conversation history management + JSON persistence
+│   ├── compression.py       # Context window estimation + small-model summarization
+│   ├── promotion.py         # Daily log → MEMORY.md promotion via LLM
+│   ├── scheduler.py         # Cron scheduler (asyncio loop + croniter)
+│   ├── telegram_format.py   # Markdown → Telegram HTML converter
+│   ├── vector_store.py      # sqlite-vec vector store for semantic search over daily logs
+│   ├── codex_auth.py        # OAuth 2.0 + PKCE auth for OpenAI Codex (ChatGPT subscription)
+│   ├── providers/           # Pluggable LLM provider abstraction
+│   │   ├── __init__.py      # Factory: get_provider(), get_model(), get_small_model()
+│   │   ├── base.py          # LLMProvider ABC + LLMResponse/ToolCall/LLMError types
+│   │   ├── anthropic.py     # Anthropic (Claude) provider
+│   │   ├── openai.py        # OpenAI provider
+│   │   └── openai_codex.py  # OpenAI Codex provider (ChatGPT subscription via OAuth)
+│   └── tools/               # Self-registering Python tools
+│       ├── __init__.py      # Auto-imports all tools so they self-register
+│       ├── shell.py         # run_shell tool
+│       ├── files.py         # read_file, write_file, edit_file, list_directory tools
+│       ├── profile.py       # update_identity + update_soul + update_user_profile tools
+│       ├── memory_skill.py  # recall_memory, log_daily, save_memory tools
+│       ├── cron.py          # create_cron, list_crons, delete_cron tools
+│       ├── web_search.py    # web_search tool (Brave Search API)
+│       ├── web_fetch.py     # web_fetch tool (HTTP + trafilatura)
+│       ├── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
+│       ├── skill_edit.py    # edit_skill tool (copy-on-write to user_skills/)
+│       └── tasks.py         # add_task, list_tasks, update_task tools (autopilot task queue)
+├── skills/                  # Built-in instruction skills (git-tracked)
+│   └── skill_name/
 │       └── SKILL.md
-└── memory/
-    ├── IDENTITY.md      # Agent identity metadata (name, creature, vibe, emoji, avatar)
-    ├── SOUL.md          # Agent behavioral rules (core truths, boundaries, tone, continuity)
-    ├── USER.md          # User personal info (name, role, interests)
-    ├── MEMORY.md        # Long-term memory (curated, durable)
-    ├── TASKS.md         # Autopilot task queue (auto-seeded on first access)
-    └── daily/           # Daily logs (ephemeral, append-only)
-        └── YYYY-MM-DD.md
+├── user_skills/             # User skill overrides (gitignored)
+│   └── skill_name/
+│       └── SKILL.md
+├── memory/                  # All memory (gitignored)
+│   ├── IDENTITY.md
+│   ├── SOUL.md
+│   ├── USER.md
+│   ├── MEMORY.md
+│   ├── TASKS.md
+│   └── daily/
+│       └── YYYY-MM-DD.md
+├── pyproject.toml           # Package metadata + dependencies
+└── Dockerfile
 ```
 
 Key design principle: `brain.py` has zero knowledge of individual tools or skills.
@@ -64,10 +68,10 @@ Instruction skills are auto-discovered from `skills/` — adding a skill is just
 ## Tech Stack
 
 - Python 3.11+
-- `anthropic` SDK + `openai` SDK — pluggable via `agent/providers/`
+- `anthropic` SDK + `openai` SDK — pluggable via `inkagent/providers/`
 - Markdown files — all memory storage
 - `sqlite-vec` — vector storage for semantic search over daily logs (`memory/memory.db`)
-- `python-telegram-bot` — Telegram bot interface (`bot.py`)
+- `python-telegram-bot` — Telegram bot interface (`inkagent/bot.py`)
 - `httpx` — HTTP client for web search and fetch
 - `trafilatura` — HTML content extraction for `web_fetch`
 - `PyYAML` — YAML frontmatter parsing for instruction skills
@@ -77,17 +81,19 @@ Instruction skills are auto-discovered from `skills/` — adding a skill is just
 ## Common Commands
 
 ```bash
+# Install (editable mode for development)
+pip install -e .
+
 # Run the CLI (default: Anthropic Claude)
-python main.py
+python -m inkagent
+# or: inkagent
 
 # Run the Telegram bot
-python bot.py
+python -m inkagent.bot
+# or: inkagent-bot
 
 # Run with ChatGPT subscription (Codex OAuth — no API key needed)
-python -m agent.codex_auth              # one-time login via browser
-
-# Install dependencies
-pip install -r requirements.txt
+python -m inkagent.codex_auth           # one-time login via browser
 
 # View memory
 cat memory/IDENTITY.md
@@ -127,11 +133,11 @@ The `memory/` directory is gitignored — never commit it.
 
 ## Scheduler (Cron)
 
-`agent/scheduler.py` provides a cron-based task scheduler. Jobs are persisted in `memory/crons.json`.
+`inkagent/scheduler.py` provides a cron-based task scheduler. Jobs are persisted in `memory/crons.json`.
 
 - The scheduler runs as an asyncio background task, checking every 60 seconds
 - When a job fires, it calls `run_agent(prompt, session_id)` with a fresh session (timestamped session ID) and delivers the reply via a callback
-- In Telegram bot mode (`bot.py`), the scheduler starts automatically and sends replies to the bound chat
+- In Telegram bot mode (`inkagent/bot.py`), the scheduler starts automatically and sends replies to the bound chat
 - In CLI mode, the scheduler does not run (no persistent event loop), but cron tools still work — jobs created in CLI take effect when the bot starts
 - Jobs are bound to a `session_id` (e.g. `tg_123456`) at creation time via `session.current_session_id`
 - **Timezone-aware**: each job stores an IANA timezone (default: `Asia/Shanghai`). Cron expressions are interpreted in the job's timezone, so "0 9 * * *" means 9 AM local time
@@ -155,7 +161,7 @@ Autopilot enables the agent to autonomously execute tasks from a queue without u
 Components:
 - **`memory/TASKS.md`** — Task queue file (auto-seeded on first access). Tasks have four status markers: `[ ]` pending, `[~]` in progress, `[x]` completed, `[!]` blocked
 - **`skills/autopilot/SKILL.md`** — Instruction skill teaching the agent the autopilot workflow (read tasks, pick highest priority, execute, update status, log results)
-- **`tools/tasks.py`** — `add_task`, `list_tasks`, `update_task` tools for managing the task queue
+- **`inkagent/tools/tasks.py`** — `add_task`, `list_tasks`, `update_task` tools for managing the task queue
 
 The heartbeat skill checks for pending autopilot tasks before running its regular checklist. When a task is found, the agent reads the autopilot skill instructions, works on the task (creating a git branch, making changes, running tests), updates the task status, and logs results to the daily log. No separate cron job is needed.
 
@@ -179,10 +185,10 @@ Each tool is a Python function decorated with `@registry.register(...)`.
 The decorator takes `name`, `description`, and `input_schema` (JSON Schema format for Claude tool_use).
 
 To add a new tool:
-1. Create `tools/your_tool.py`
-2. Import `register` from `agent.registry`
+1. Create `inkagent/tools/your_tool.py`
+2. Import `register` from `inkagent.registry`
 3. Decorate your function with `@register(...)`
-4. Add `from tools import your_tool` in `tools/__init__.py`
+4. Add `from inkagent.tools import your_tool` in `inkagent/tools/__init__.py`
 
 Built-in tools:
 - `run_shell` — executes shell commands, 30s timeout, output capped at 3000 chars
@@ -254,7 +260,7 @@ No recursion limit is set — rely on the LLM's natural termination behavior.
 
 ## Provider System
 
-`agent/providers/` contains a pluggable abstraction layer. `LLMProvider` (ABC) defines the interface:
+`inkagent/providers/` contains a pluggable abstraction layer. `LLMProvider` (ABC) defines the interface:
 - `complete()` — full completion with tool support, returns `LLMResponse`
 - `simple_complete()` — text-only completion (used by compression/promotion)
 - `format_tools()` — converts registry tool schemas to provider-native format
@@ -267,9 +273,9 @@ IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — alway
 
 The `openai-codex` provider allows running inkagent using a **ChatGPT Plus/Pro subscription** instead of paying for API credits. It uses OAuth 2.0 + PKCE to authenticate against OpenAI's Codex endpoint.
 
-- **Auth module**: `agent/codex_auth.py` — handles OAuth login, token storage (`~/.inkagent/codex-auth.json`), and automatic refresh
+- **Auth module**: `inkagent/codex_auth.py` — handles OAuth login, token storage (`~/.inkagent/codex-auth.json`), and automatic refresh
 - **API endpoint**: `https://chatgpt.com/backend-api/codex/responses` (Responses API format, not Chat Completions)
-- **Login**: `python -m agent.codex_auth` opens a browser for one-time OAuth consent
+- **Login**: `python -m inkagent.codex_auth` opens a browser for one-time OAuth consent
 - **No API key needed** — authentication uses the ChatGPT subscription session
 - **Limitations**: subject to ChatGPT subscription usage quotas; no embeddings (vector search still needs `OPENAI_API_KEY`)
 
@@ -277,24 +283,24 @@ The `openai-codex` provider allows running inkagent using a **ChatGPT Plus/Pro s
 
 The agent's `write_file` and `edit_file` tools enforce a path allowlist for writes within the project directory:
 - **Writable**: `memory/`, `conversations/`, `user_skills/`
-- **Read-only**: all other project files (`agent/`, `tools/`, `skills/`, `main.py`, `bot.py`, etc.)
+- **Read-only**: all other project files (`inkagent/`, `skills/`, etc.)
 - **Outside the project**: no restrictions — the agent can freely read and write external files
 - **Always blocked**: `.db` / `.sqlite` files (managed databases)
 
-This is enforced at the tool level (`_check_writable` in `tools/files.py`). The system prompt also instructs the LLM not to use `run_shell` to bypass these restrictions (soft limit).
+This is enforced at the tool level (`_check_writable` in `inkagent/tools/files.py`). The system prompt also instructs the LLM not to use `run_shell` to bypass these restrictions (soft limit).
 
 ## Code Style
 
 - Type hints on all function signatures
-- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, `scheduler.py`, `vector_store.py`, `codex_auth.py`, and `providers/__init__.py`. Shared constants live in `agent/config.py`
-- Cap tool output at `TOOL_OUTPUT_CAP` chars (see `agent/config.py`) before returning to avoid context explosion
-- IMPORTANT: Never import individual tool modules in `brain.py` — only import the `tools` package which auto-registers all tools
+- No global state except `registry` singleton and provider singleton; module-level state is scoped to `session.py`, `compression.py`, `promotion.py`, `scheduler.py`, `vector_store.py`, `codex_auth.py`, and `providers/__init__.py`. Shared constants live in `inkagent/config.py`
+- Cap tool output at `TOOL_OUTPUT_CAP` chars (see `inkagent/config.py`) before returning to avoid context explosion
+- IMPORTANT: Never import individual tool modules in `brain.py` — only import the `inkagent.tools` package which auto-registers all tools
 - IMPORTANT: Never import `anthropic` or `openai` directly in `brain.py` — always go through `providers`
 
 ## Roadmap (in order)
 
 1. ~~CLI + shell tool + Markdown memory~~ (Phase 1)
-2. ~~Telegram bot interface~~ — `bot.py`, owner-only, typing indicator
+2. ~~Telegram bot interface~~ — `inkagent/bot.py`, owner-only, typing indicator
 3. ~~Scheduled tasks~~ — cron scheduler (`croniter` + asyncio), `create_cron` / `list_crons` / `delete_cron` tools
 4. ~~Web search tool~~ — `web_search` (Brave) + `web_fetch` (trafilatura)
 5. ~~Gmail~~ — `gmail_search`, `gmail_read`, `gmail_send` tools (IMAP/SMTP + App Password)

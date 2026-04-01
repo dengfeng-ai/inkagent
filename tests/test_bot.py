@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from bot import _is_owner, _send_long_message, handle_message, start_command, MAX_MSG_LEN
+from inkagent.bot import _is_owner, _send_long_message, handle_message, start_command, MAX_MSG_LEN
 
 
 # --- Helpers ---
@@ -70,8 +70,8 @@ async def test_send_exact_limit():
 # --- handle_message ---
 
 @pytest.mark.asyncio
-@patch("bot._get_owner_id", return_value=123)
-@patch("bot.run_agent", return_value="agent reply")
+@patch("inkagent.bot._get_owner_id", return_value=123)
+@patch("inkagent.bot.run_agent", return_value="agent reply")
 async def test_handle_message_owner(mock_agent, mock_owner):
     update = _make_update(user_id=123, text="hi", chat_id=42)
     await handle_message(update, MagicMock())
@@ -81,8 +81,8 @@ async def test_handle_message_owner(mock_agent, mock_owner):
 
 
 @pytest.mark.asyncio
-@patch("bot._get_owner_id", return_value=123)
-@patch("bot.run_agent")
+@patch("inkagent.bot._get_owner_id", return_value=123)
+@patch("inkagent.bot.run_agent")
 async def test_handle_message_stranger_ignored(mock_agent, mock_owner):
     update = _make_update(user_id=999, text="hi")
     await handle_message(update, MagicMock())
@@ -92,8 +92,8 @@ async def test_handle_message_stranger_ignored(mock_agent, mock_owner):
 
 
 @pytest.mark.asyncio
-@patch("bot._get_owner_id", return_value=123)
-@patch("bot.run_agent")
+@patch("inkagent.bot._get_owner_id", return_value=123)
+@patch("inkagent.bot.run_agent")
 async def test_handle_message_empty_text(mock_agent, mock_owner):
     update = _make_update(user_id=123)
     update.message.text = None
@@ -105,7 +105,7 @@ async def test_handle_message_empty_text(mock_agent, mock_owner):
 # --- start_command ---
 
 @pytest.mark.asyncio
-@patch("bot._get_owner_id", return_value=123)
+@patch("inkagent.bot._get_owner_id", return_value=123)
 async def test_start_command_owner(mock_owner):
     update = _make_update(user_id=123)
     await start_command(update, MagicMock())
@@ -113,7 +113,7 @@ async def test_start_command_owner(mock_owner):
 
 
 @pytest.mark.asyncio
-@patch("bot._get_owner_id", return_value=123)
+@patch("inkagent.bot._get_owner_id", return_value=123)
 async def test_start_command_stranger(mock_owner):
     update = _make_update(user_id=999)
     await start_command(update, MagicMock())

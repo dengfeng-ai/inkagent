@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "inkagent"
+version = "0.1.0"
+description = "A lightweight personal AI agent that runs locally, powered by Markdown memory."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.39.0",
+    "openai>=1.0.0",
+    "langfuse>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "python-telegram-bot>=21.0",
+    "httpx>=0.27.0",
+    "trafilatura>=1.12.0",
+    "croniter>=2.0.0",
+    "sqlite-vec>=0.1.1",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[project.scripts]
+inkagent = "inkagent.cli:main"
+inkagent-bot = "inkagent.bot:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["inkagent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

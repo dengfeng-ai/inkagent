@@ -71,8 +71,8 @@ docker run -it --env-file .env \
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-python main.py
+pip install -e .
+python -m inkagent
 ```
 
 Telegram 机器人、多模型配置、Gmail、网页搜索、定时任务等更多功能请参阅[用户手册](docs/guide-zh.md)。
@@ -80,30 +80,19 @@ Telegram 机器人、多模型配置、Gmail、网页搜索、定时任务等更
 ## 架构
 
 ```
-inkagent/
-├── main.py              # CLI 入口
-├── bot.py               # Telegram 机器人入口
-├── agent/
+项目根目录/
+├── inkagent/            # Python 包
+│   ├── cli.py           # CLI 入口
+│   ├── bot.py           # Telegram 机器人入口
 │   ├── brain.py         # Agent 循环（模型无关）
-│   ├── config.py        # 共享常量（限制、超时）
+│   ├── config.py        # 共享常量
 │   ├── memory.py        # Markdown 记忆（读写）
-│   ├── registry.py      # 工具注册
-│   ├── skill_loader.py  # Markdown 技能加载器（内置 + 用户覆盖）
-│   ├── prompts.py       # 提示词模板
-│   ├── session.py       # 会话历史 + 持久化
-│   ├── compression.py   # 上下文窗口压缩
-│   ├── promotion.py     # 每日日志 → 长期记忆晋升
-│   ├── scheduler.py     # Cron 调度器（asyncio + croniter）
-│   ├── vector_store.py  # sqlite-vec 向量存储
-│   └── providers/       # 可插拔 LLM 提供者
-│       ├── base.py      # LLMProvider ABC + 共享类型
-│       ├── anthropic.py # Anthropic (Claude)
-│       ├── openai.py    # OpenAI
-│       └── openai_codex.py # OpenAI Codex（ChatGPT 订阅）
-├── tools/               # 自注册 Python 工具
+│   ├── providers/       # 可插拔 LLM 提供者
+│   └── tools/           # 自注册 Python 工具
 ├── skills/              # 内置指令技能（Git 跟踪）
 ├── user_skills/         # 用户技能覆盖（gitignored）
-└── memory/              # 所有记忆（gitignored）
+├── memory/              # 所有记忆（gitignored）
+└── pyproject.toml       # 包元数据 + 依赖
 ```
 
 核心设计：`brain.py` 对具体工具和技能零感知。工具通过 `@registry.register(...)` 自注册，指令技能从 `skills/` 和 `user_skills/` 自动发现 — 添加任何一种都不需要改动核心代码。`user_skills/` 中同名技能会覆盖内置版本，`git pull` 升级不会产生冲突。
