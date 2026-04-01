@@ -195,6 +195,7 @@ else:
 
                 from_val = _decode_header(msg.get("From", "?"))
                 to_val = _decode_header(msg.get("To", "?"))
+                cc_val = _decode_header(msg.get("Cc", ""))
                 subject_val = _decode_header(msg.get("Subject", "(no subject)"))
                 date_val = msg.get("Date", "?")
                 message_id = msg.get("Message-ID", "")
@@ -205,6 +206,10 @@ else:
                 result = (
                     f"From: {from_val}\n"
                     f"To: {to_val}\n"
+                )
+                if cc_val:
+                    result += f"Cc: {cc_val}\n"
+                result += (
                     f"Subject: {subject_val}\n"
                     f"Date: {date_val}\n"
                     f"Message-ID: {message_id}\n"
@@ -246,6 +251,14 @@ else:
                     "type": "string",
                     "description": "Email body (plain text)",
                 },
+                "cc": {
+                    "type": "string",
+                    "description": "CC recipient(s), comma-separated (optional)",
+                },
+                "bcc": {
+                    "type": "string",
+                    "description": "BCC recipient(s), comma-separated (optional)",
+                },
                 "in_reply_to": {
                     "type": "string",
                     "description": "Message-ID header of the email being replied to (optional)",
@@ -258,6 +271,8 @@ else:
         to: str,
         subject: str,
         body: str,
+        cc: str | None = None,
+        bcc: str | None = None,
         in_reply_to: str | None = None,
     ) -> str:
         mime_msg = MIMEText(body)
@@ -265,21 +280,36 @@ else:
         mime_msg["To"] = to
         mime_msg["Subject"] = subject
 
+        if cc:
+            mime_msg["Cc"] = cc
+
         if in_reply_to:
             mime_msg["In-Reply-To"] = in_reply_to
             mime_msg["References"] = in_reply_to
+
+        # Build recipient list for SMTP envelope (BCC not in headers)
+        recipients = [addr.strip() for addr in to.split(",")]
+        if cc:
+            recipients += [addr.strip() for addr in cc.split(",")]
+        if bcc:
+            recipients += [addr.strip() for addr in bcc.split(",")]
 
         try:
             with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
                 smtp.starttls()
                 smtp.login(_GMAIL_ADDRESS, _GMAIL_APP_PASSWORD)
-                smtp.send_message(mime_msg)
+                smtp.sendmail(_GMAIL_ADDRESS, recipients, mime_msg.as_string())
         except smtplib.SMTPException as e:
             return f"Error: Failed to send email — {e}"
         except Exception as e:
             return f"Error: {e}"
 
-        return f"Email sent to {to}."
+        sent_info = f"Email sent to {to}."
+        if cc:
+            sent_info += f" CC: {cc}"
+        if bcc:
+            sent_info += f" BCC: {bcc}"
+        return sent_info
 
     # -------------------------------------------------------------------
     # gmail_mark_read
