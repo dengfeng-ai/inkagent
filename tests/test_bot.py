@@ -44,7 +44,7 @@ def test_is_owner_no_user():
 async def test_send_short_message():
     update = _make_update(user_id=1)
     await _send_long_message(update, "short reply")
-    update.message.reply_text.assert_awaited_once_with("short reply")
+    update.message.reply_text.assert_awaited_once_with("short reply", parse_mode="HTML")
 
 
 @pytest.mark.asyncio
@@ -64,7 +64,7 @@ async def test_send_exact_limit():
     update = _make_update(user_id=1)
     text = "b" * MAX_MSG_LEN
     await _send_long_message(update, text)
-    update.message.reply_text.assert_awaited_once_with(text)
+    update.message.reply_text.assert_awaited_once_with(text, parse_mode="HTML")
 
 
 # --- handle_message ---
@@ -77,7 +77,7 @@ async def test_handle_message_owner(mock_agent, mock_owner):
     await handle_message(update, MagicMock())
 
     mock_agent.assert_called_once_with("hi", "tg_42")
-    update.message.reply_text.assert_awaited_once_with("agent reply")
+    update.message.reply_text.assert_awaited_once_with("agent reply", parse_mode="HTML")
 
 
 @pytest.mark.asyncio
