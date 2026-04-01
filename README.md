@@ -1,13 +1,30 @@
-# inkagent
+<p align="right">
+  <b>English</b> &nbsp;·&nbsp; <a href="README_zh.md">中文</a>
+</p>
 
-A lightweight personal AI agent that runs locally on your machine. Powered by Claude or OpenAI, driven by Markdown memory.
+<p align="center">
+  <img src="assets/logo.svg" width="360" alt="inkagent"/>
+</p>
 
-Inspired by [OpenClaw](https://github.com/nichochar/open-claw). Built in Python.
+<p align="center">
+  <b>A lightweight personal AI agent that runs locally, powered by Markdown memory.</b>
+</p>
 
-## Documentation
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat" alt="License"></a>
+  <img src="https://img.shields.io/badge/Python-%E2%89%A53.11-3776AB?style=flat&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Docker-lightgrey?style=flat" alt="Platform">
+  <img src="https://img.shields.io/badge/LLM-Claude%20%7C%20OpenAI%20%7C%20ChatGPT-green?style=flat" alt="LLM Providers">
+</p>
 
-- [User Guide (English)](docs/guide-en.md)
-- [用户手册 (中文)](docs/guide-zh.md)
+<p align="center">
+  <a href="docs/guide-en.md">User Guide</a> &nbsp;&middot;&nbsp;
+  <a href="#features">Features</a> &nbsp;&middot;&nbsp;
+  <a href="#quick-start">Quick Start</a> &nbsp;&middot;&nbsp;
+  <a href="#architecture">Architecture</a> &nbsp;&middot;&nbsp;
+  <a href="#roadmap">Roadmap</a>
+</p>
+
 
 ## Features
 
