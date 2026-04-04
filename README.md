@@ -19,26 +19,35 @@
 
 <p align="center">
   <a href="docs/guide-en.md">User Guide</a> &nbsp;&middot;&nbsp;
-  <a href="#features">Features</a> &nbsp;&middot;&nbsp;
+  <a href="#why-inkagent">Why inkagent?</a> &nbsp;&middot;&nbsp;
+  <a href="#choose-your-setup">Setup</a> &nbsp;&middot;&nbsp;
   <a href="#quick-start">Quick Start</a> &nbsp;&middot;&nbsp;
-  <a href="#architecture">Architecture</a> &nbsp;&middot;&nbsp;
   <a href="#roadmap">Roadmap</a>
 </p>
 
 
-## Features
+## Why inkagent?
 
-- **Agentic tool-use loop** — sends your message to the LLM, executes tools, feeds results back, repeats until done
-- **Markdown memory** — persona, user profile, long-term memory, daily logs — all plain `.md` files you can read and edit
-- **Auto memory promotion** — daily logs are curated into long-term memory overnight via a small model
-- **Memory search** — daily logs indexed with sqlite-vec for vector search (requires OpenAI API key for embeddings, falls back to keyword search)
-- **Multi-provider** — supports Anthropic (Claude), OpenAI, and ChatGPT subscription (Codex OAuth), switchable via env var
-- **Self-registering tools** — shell, file ops, web search, Gmail, cron, and more
-- **Instruction skills** — teach the agent new workflows with just a Markdown file, no code needed
-- **Scheduled tasks & heartbeat** — cron-based scheduler for proactive notifications; heartbeat mode for silent background checks
-- **Autopilot** — autonomous task queue; agent picks, executes, and archives tasks on each heartbeat cycle
-- **Two interfaces** — CLI (`main.py`) or Telegram bot (`bot.py`)
-- **Observability** — optional [Langfuse](https://langfuse.com) tracing for all LLM calls and tool executions
+- **Runs locally** — your data stays on your machine, not in someone else's cloud
+- **Markdown memory** — persona, user profile, long-term memory, daily logs — all plain `.md` files you own and can read
+- **Grows with you** — start with a CLI chat, add Telegram, web search, Gmail, scheduled tasks as you need them
+- **Multi-provider** — Claude, OpenAI, or ChatGPT subscription (no API key needed), switchable via one env var
+- **Extensible** — teach the agent new workflows with a Markdown file, no code needed
+
+## Choose Your Setup
+
+Start simple, add capabilities as you need them. Each level builds on the previous one.
+
+| Level | What You Get | What to Configure | Guide |
+|-------|-------------|-------------------|-------|
+| **Start here** | CLI chat with AI | One API key | [Quick Start](#quick-start) |
+| **Mobile access** | Chat via Telegram on your phone | + Telegram bot token | [Telegram](docs/guide-en.md#4-telegram-bot) |
+| **Web-connected** | Agent can search the internet | + Brave API key | [Web Search](docs/guide-en.md#5-web-search) |
+| **Email assistant** | Agent reads and sends Gmail | + Gmail App Password | [Gmail](docs/guide-en.md#6-gmail-integration) |
+| **Proactive assistant** | Scheduled tasks, background checks, auto-pilot | Telegram + heartbeat setup | [Scheduled Tasks](docs/guide-en.md#7-scheduled-tasks--heartbeat) |
+| **Better memory** | Semantic search over past conversations | + OpenAI API key (for embeddings) | [Memory Search](docs/guide-en.md#3-memory-system) |
+
+> **No API key?** Use `LLM_PROVIDER=openai-codex` to run on your ChatGPT Plus/Pro subscription. See the [Provider Guide](docs/guide-en.md#2-choosing-an-llm-provider).
 
 ## Quick Start
 
@@ -92,25 +101,11 @@ python -m inkagent.bot
 
 For Telegram bot, provider options, Gmail, web search, scheduled tasks, and more — see the [User Guide](docs/guide-en.md).
 
-## Architecture
+## How It Works
 
-```
-project root/
-├── inkagent/            # Python package
-│   ├── cli.py           # CLI entry point
-│   ├── bot.py           # Telegram bot entry point
-│   ├── brain.py         # Agentic loop (provider-agnostic)
-│   ├── config.py        # Shared constants
-│   ├── memory.py        # Markdown memory (read/write)
-│   ├── providers/       # Pluggable LLM providers
-│   └── tools/           # Self-registering Python tools
-├── skills/              # Built-in instruction skills (git-tracked)
-├── user_skills/         # User skill overrides (gitignored)
-├── memory/              # All memory (gitignored)
-└── pyproject.toml       # Package metadata + dependencies
-```
+inkagent is an agentic loop: you send a message → the LLM decides which tools to call → tools execute → results go back to the LLM → repeat until done. All memory is stored as Markdown files in `memory/` that you can read anytime.
 
-Key design: `brain.py` has zero knowledge of individual tools or skills. Tools register via `@registry.register(...)`, instruction skills are auto-discovered from `skills/` and `user_skills/` — adding either never touches core code. User skills in `user_skills/` override built-in ones with the same name, so upgrades via `git pull` never conflict with customizations.
+For architecture details and development info, see [CLAUDE.md](CLAUDE.md).
 
 ## Roadmap
 

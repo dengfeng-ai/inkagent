@@ -19,25 +19,34 @@
 
 <p align="center">
   <a href="docs/guide-zh.md">用户手册</a> &nbsp;&middot;&nbsp;
-  <a href="#功能特性">功能</a> &nbsp;&middot;&nbsp;
+  <a href="#为什么选-inkagent">为什么选 inkagent？</a> &nbsp;&middot;&nbsp;
+  <a href="#按需配置">按需配置</a> &nbsp;&middot;&nbsp;
   <a href="#快速开始">快速开始</a> &nbsp;&middot;&nbsp;
-  <a href="#架构">架构</a> &nbsp;&middot;&nbsp;
   <a href="#路线图">路线图</a>
 </p>
 
-## 功能特性
+## 为什么选 inkagent？
 
-- **Agent 工具循环** — 将消息发送给 LLM，执行工具，回传结果，循环直到完成
-- **Markdown 记忆** — 人设、用户档案、长期记忆、每日日志，全部是可读写的 `.md` 文件
-- **记忆自动晋升** — 每日日志由小模型自动筛选，精华内容晋升为长期记忆
-- **记忆搜索** — 使用 sqlite-vec 对每日日志建立向量索引（需要 OpenAI API Key 做 embedding，无 Key 时回退到关键词搜索）
-- **多模型支持** — 支持 Anthropic (Claude)、OpenAI、ChatGPT 订阅 (Codex OAuth)，通过环境变量切换
-- **自注册工具** — Shell、文件操作、网页搜索、Gmail、定时任务等
-- **指令技能** — 用一个 Markdown 文件教会 Agent 新工作流，无需写代码
-- **定时任务与心跳** — 基于 cron 的调度器，支持主动通知；心跳模式用于静默后台检查
-- **自动驾驶** — 自主任务队列，Agent 在每次心跳周期中自动领取、执行和归档任务
-- **双界面** — CLI (`main.py`) 或 Telegram 机器人 (`bot.py`)
-- **可观测性** — 可选 [Langfuse](https://langfuse.com) 追踪所有 LLM 调用和工具执行
+- **本地运行** — 数据留在你自己的机器上，不存在别人的云里
+- **Markdown 记忆** — 人设、用户档案、长期记忆、每日日志，全部是你拥有的 `.md` 文件
+- **渐进式使用** — 从 CLI 聊天开始，按需添加 Telegram、网页搜索、Gmail、定时任务
+- **多模型支持** — Claude、OpenAI 或 ChatGPT 订阅（无需 API Key），一个环境变量切换
+- **易于扩展** — 用一个 Markdown 文件教会 Agent 新工作流，无需写代码
+
+## 按需配置
+
+从最简配置开始，按需逐步开启更多能力。每一级都建立在前一级的基础上。
+
+| 级别 | 你能做什么 | 需要配置 | 指南 |
+|------|-----------|---------|------|
+| **从这里开始** | 在终端和 AI 对话 | 一个 API Key | [快速开始](#快速开始) |
+| **移动访问** | 通过 Telegram 随时聊天 | + Telegram Bot Token | [Telegram 机器人](docs/guide-zh.md#4-telegram-机器人) |
+| **联网助手** | Agent 可以搜索互联网 | + Brave API Key | [Web 搜索](docs/guide-zh.md#5-web-搜索) |
+| **邮件助手** | Agent 可以读写 Gmail | + Gmail 应用专用密码 | [Gmail 集成](docs/guide-zh.md#6-gmail-集成) |
+| **主动助手** | 定时任务、后台检查、自动驾驶 | Telegram + 心跳配置 | [定时任务](docs/guide-zh.md#7-定时任务与心跳检查) |
+| **更强记忆** | 对历史对话进行语义搜索 | + OpenAI API Key（用于 embedding） | [记忆搜索](docs/guide-zh.md#3-记忆系统) |
+
+> **没有 API Key？** 设置 `LLM_PROVIDER=openai-codex` 即可使用你的 ChatGPT Plus/Pro 订阅运行。详见[模型配置指南](docs/guide-zh.md#2-选择-llm-提供商)。
 
 ## 快速开始
 
@@ -91,25 +100,11 @@ python -m inkagent.bot
 
 Telegram 机器人、多模型配置、Gmail、网页搜索、定时任务等更多功能请参阅[用户手册](docs/guide-zh.md)。
 
-## 架构
+## 工作原理
 
-```
-项目根目录/
-├── inkagent/            # Python 包
-│   ├── cli.py           # CLI 入口
-│   ├── bot.py           # Telegram 机器人入口
-│   ├── brain.py         # Agent 循环（模型无关）
-│   ├── config.py        # 共享常量
-│   ├── memory.py        # Markdown 记忆（读写）
-│   ├── providers/       # 可插拔 LLM 提供者
-│   └── tools/           # 自注册 Python 工具
-├── skills/              # 内置指令技能（Git 跟踪）
-├── user_skills/         # 用户技能覆盖（gitignored）
-├── memory/              # 所有记忆（gitignored）
-└── pyproject.toml       # 包元数据 + 依赖
-```
+inkagent 是一个 Agent 循环：你发送消息 → LLM 决定调用哪些工具 → 工具执行 → 结果回传给 LLM → 循环直到完成。所有记忆存储为 `memory/` 目录下的 Markdown 文件，随时可以查看。
 
-核心设计：`brain.py` 对具体工具和技能零感知。工具通过 `@registry.register(...)` 自注册，指令技能从 `skills/` 和 `user_skills/` 自动发现 — 添加任何一种都不需要改动核心代码。`user_skills/` 中同名技能会覆盖内置版本，`git pull` 升级不会产生冲突。
+架构细节和开发信息见 [CLAUDE.md](CLAUDE.md)。
 
 ## 路线图
 
