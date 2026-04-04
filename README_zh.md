@@ -65,6 +65,16 @@ docker run -it --env-file .env \
   inkagent
 ```
 
+运行 Telegram 机器人：
+
+```bash
+docker run -it --env-file .env \
+  -v $(pwd)/memory:/app/memory \
+  -v $(pwd)/conversations:/app/conversations \
+  -v $(pwd)/user_skills:/app/user_skills \
+  inkagent python -m inkagent.bot
+```
+
 ### 本地运行
 
 需要 **Python 3.11+**。
@@ -74,6 +84,9 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 python -m inkagent
+
+# 运行 Telegram 机器人
+python -m inkagent.bot
 ```
 
 Telegram 机器人、多模型配置、Gmail、网页搜索、定时任务等更多功能请参阅[用户手册](docs/guide-zh.md)。

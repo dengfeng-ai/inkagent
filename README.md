@@ -66,6 +66,16 @@ docker run -it --env-file .env \
   inkagent
 ```
 
+To run the Telegram bot:
+
+```bash
+docker run -it --env-file .env \
+  -v $(pwd)/memory:/app/memory \
+  -v $(pwd)/conversations:/app/conversations \
+  -v $(pwd)/user_skills:/app/user_skills \
+  inkagent python -m inkagent.bot
+```
+
 ### Local
 
 Requires **Python 3.11+**.
@@ -75,6 +85,9 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 python -m inkagent
+
+# Run Telegram bot
+python -m inkagent.bot
 ```
 
 For Telegram bot, provider options, Gmail, web search, scheduled tasks, and more — see the [User Guide](docs/guide-en.md).
