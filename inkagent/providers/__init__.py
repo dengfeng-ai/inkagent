@@ -18,8 +18,8 @@ _DEFAULTS: dict[str, dict[str, str]] = {
         "small_model": "claude-haiku-4-5-20251001",
     },
     "openai": {
-        "model": "gpt-4o",
-        "small_model": "gpt-4o-mini",
+        "model": "gpt-5.4",
+        "small_model": "gpt-5.4-mini",
     },
     "openai-codex": {
         "model": "gpt-5.4",

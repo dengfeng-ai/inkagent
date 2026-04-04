@@ -9,6 +9,13 @@ from openai import OpenAI, APIError
 
 from inkagent.providers.base import LLMError, LLMProvider, LLMResponse, ToolCall, Usage
 
+# Models that require max_completion_tokens instead of max_tokens.
+_COMPLETION_TOKENS_PREFIXES = ("o1", "o3", "o4", "gpt-5")
+
+
+def _needs_completion_tokens(model: str) -> bool:
+    return any(model.startswith(p) for p in _COMPLETION_TOKENS_PREFIXES)
+
 
 class OpenAIProvider(LLMProvider):
 
@@ -27,12 +34,15 @@ class OpenAIProvider(LLMProvider):
         # Prepend system message.
         full_messages = [{"role": "system", "content": system}] + messages
 
+        # GPT-5.x and o-series require max_completion_tokens instead of max_tokens.
+        token_param = "max_completion_tokens" if _needs_completion_tokens(model) else "max_tokens"
+
         try:
             raw = self._client.chat.completions.create(
                 model=model,
-                max_tokens=max_tokens,
                 messages=full_messages,
                 tools=tools if tools else None,
+                **{token_param: max_tokens},
             )
         except APIError as e:
             raise LLMError(str(e), original=e) from e
@@ -81,11 +91,13 @@ class OpenAIProvider(LLMProvider):
         prompt: str,
         max_tokens: int,
     ) -> str:
+        token_param = "max_completion_tokens" if _needs_completion_tokens(model) else "max_tokens"
+
         try:
             raw = self._client.chat.completions.create(
                 model=model,
-                max_tokens=max_tokens,
                 messages=[{"role": "user", "content": prompt}],
+                **{token_param: max_tokens},
             )
         except APIError as e:
             raise LLMError(str(e), original=e) from e
