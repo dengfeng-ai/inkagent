@@ -14,8 +14,8 @@ from inkagent.providers.base import LLMError, LLMProvider, LLMResponse, ToolCall
 # Default models per provider.
 _DEFAULTS: dict[str, dict[str, str]] = {
     "anthropic": {
-        "model": "claude-sonnet-4-20250514",
-        "small_model": "claude-haiku-4-5-20251001",
+        "model": "claude-opus-4-6",
+        "small_model": "claude-sonnet-4-6",
     },
     "openai": {
         "model": "gpt-5.4",
