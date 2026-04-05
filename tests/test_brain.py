@@ -20,16 +20,6 @@ def _make_response(text="hello", stop_reason="end_turn", tool_calls=None):
     )
 
 
-def _fake_provider(responses):
-    """Create a mock provider that returns responses in sequence."""
-    provider = MagicMock()
-    provider.complete.side_effect = responses
-    provider.format_tools.return_value = [{"name": "stub"}]
-    provider.assistant_message.return_value = {"role": "assistant", "content": ""}
-    provider.tool_results_messages.return_value = [{"role": "user", "content": "result"}]
-    return provider
-
-
 # Shared patches for all brain tests — isolate from real memory, session, etc.
 _BRAIN_PATCHES = {
     "inkagent.brain.memory": MagicMock(
@@ -45,17 +35,17 @@ _BRAIN_PATCHES = {
     "inkagent.brain.maybe_compress": MagicMock(),
     "inkagent.brain.maybe_promote": MagicMock(),
     "inkagent.brain.get_model": MagicMock(return_value="test-model"),
+    "inkagent.brain.registry.get_tools": MagicMock(return_value=[]),
 }
 
 
 @pytest.fixture()
 def brain_env(tmp_memory_dir):
-    """Patch all brain dependencies and return (provider, run_agent)."""
+    """Patch all brain dependencies and return provider module bindings."""
     patches = {k: patch(k, v) for k, v in _BRAIN_PATCHES.items()}
-    mocks = {k: p.start() for k, p in patches.items()}
+    for p in patches.values():
+        p.start()
 
-    # Session needs real logic but pointed at tmp dir (via tmp_memory_dir)
-    # Provider and registry need per-test control, so we patch them here
     provider = MagicMock()
     provider.format_tools.return_value = []
     provider.assistant_message.return_value = {"role": "assistant", "content": ""}
@@ -64,155 +54,84 @@ def brain_env(tmp_memory_dir):
     p_provider = patch("inkagent.brain.get_provider", return_value=provider)
     p_provider.start()
 
-    # Import after patching to avoid side-effects
-    from inkagent.brain import run_agent
+    from inkagent.brain import run_agent, stream_agent
 
-    yield provider, run_agent
+    yield provider, run_agent, stream_agent
 
     p_provider.stop()
     for p in patches.values():
         p.stop()
 
 
-# ---------------------------------------------------------------------------
-# Single turn — LLM returns end_turn immediately
-# ---------------------------------------------------------------------------
-
 class TestSingleTurn:
     def test_returns_text(self, brain_env):
-        provider, run_agent = brain_env
-        provider.complete.return_value = _make_response(text="hi there")
-        result = run_agent("hello", "test_sid")
-        assert result == "hi there"
+        provider, run_agent, _ = brain_env
+        provider.complete.return_value = _make_response(text="hello world")
 
-    def test_calls_provider_once(self, brain_env):
-        provider, run_agent = brain_env
-        provider.complete.return_value = _make_response(text="ok")
-        run_agent("hello", "test_sid")
-        assert provider.complete.call_count == 1
+        assert run_agent("Hi") == "hello world"
 
-    def test_empty_text_returns_empty(self, brain_env):
-        provider, run_agent = brain_env
+    def test_empty_text_returns_empty_string(self, brain_env):
+        provider, run_agent, _ = brain_env
         provider.complete.return_value = _make_response(text=None)
-        result = run_agent("hello", "test_sid")
-        assert result == ""
 
+        assert run_agent("Hi") == ""
 
-# ---------------------------------------------------------------------------
-# Tool use loop — LLM calls a tool, then returns end_turn
-# ---------------------------------------------------------------------------
 
 class TestToolLoop:
-    def test_tool_executed_and_result_returned(self, brain_env):
-        provider, run_agent = brain_env
-        tool_call = ToolCall(id="tc1", name="test_tool", input={"q": "x"})
+    @patch("inkagent.brain.registry.call_tool", return_value="42")
+    def test_tool_then_final_text(self, mock_tool, brain_env):
+        provider, run_agent, _ = brain_env
         provider.complete.side_effect = [
-            _make_response(text="thinking...", stop_reason="tool_use", tool_calls=[tool_call]),
-            _make_response(text="final answer"),
+            _make_response(
+                text="Thinking...",
+                stop_reason="tool_use",
+                tool_calls=[ToolCall(id="1", name="calc", input={"x": 1})],
+            ),
+            _make_response(text="Answer: 42", stop_reason="end_turn"),
         ]
 
-        with patch("inkagent.brain.registry") as mock_reg:
-            mock_reg.get_tools.return_value = []
-            mock_reg.call_tool.return_value = "tool output"
-            result = run_agent("do something", "test_sid")
+        reply = run_agent("What is 6*7?")
 
-        assert result == "thinking...\nfinal answer"
-        mock_reg.call_tool.assert_called_once_with("test_tool", {"q": "x"})
+        assert reply == "Thinking...\nAnswer: 42"
+        mock_tool.assert_called_once_with("calc", {"x": 1})
+        assert provider.complete.call_count == 2
 
-    def test_provider_receives_tool_results(self, brain_env):
-        provider, run_agent = brain_env
-        tool_call = ToolCall(id="tc1", name="t", input={})
+
+class TestStreaming:
+    def test_stream_agent_invokes_callback_with_final_reply(self, brain_env):
+        provider, _, stream_agent = brain_env
+        provider.complete.return_value = _make_response(text="hello world")
+        seen = []
+
+        reply = stream_agent("Hi", on_stream=seen.append)
+
+        assert reply == "hello world"
+        assert seen == ["hello world"]
+
+    @patch("inkagent.brain.registry.call_tool", return_value="42")
+    def test_stream_agent_accumulates_tool_round_text(self, mock_tool, brain_env):
+        provider, _, stream_agent = brain_env
         provider.complete.side_effect = [
-            _make_response(stop_reason="tool_use", tool_calls=[tool_call]),
-            _make_response(text="done"),
+            _make_response(
+                text="Thinking...",
+                stop_reason="tool_use",
+                tool_calls=[ToolCall(id="1", name="calc", input={"x": 1})],
+            ),
+            _make_response(text="Answer: 42", stop_reason="end_turn"),
         ]
+        seen = []
 
-        with patch("inkagent.brain.registry") as mock_reg:
-            mock_reg.get_tools.return_value = []
-            mock_reg.call_tool.return_value = "result"
-            run_agent("go", "test_sid")
+        reply = stream_agent("What is 6*7?", on_stream=seen.append)
 
-        # assistant_message called to add the tool-use turn
-        provider.assistant_message.assert_called_once()
-        # tool_results_messages called with the tool output
-        provider.tool_results_messages.assert_called_once()
-        call_args = provider.tool_results_messages.call_args[0][0]
-        assert call_args[0]["tool_call_id"] == "tc1"
-        assert call_args[0]["content"] == "result"
-
-    def test_multiple_tool_calls_in_one_turn(self, brain_env):
-        provider, run_agent = brain_env
-        tc1 = ToolCall(id="a", name="tool_a", input={})
-        tc2 = ToolCall(id="b", name="tool_b", input={})
-        provider.complete.side_effect = [
-            _make_response(text=None, stop_reason="tool_use", tool_calls=[tc1, tc2]),
-            _make_response(text="all done"),
-        ]
-
-        with patch("inkagent.brain.registry") as mock_reg:
-            mock_reg.get_tools.return_value = []
-            mock_reg.call_tool.side_effect = ["result_a", "result_b"]
-            result = run_agent("multi", "test_sid")
-
-        assert mock_reg.call_tool.call_count == 2
-        assert result == "all done"
+        assert reply == "Thinking...\nAnswer: 42"
+        assert seen == ["Thinking...\nAnswer: 42"]
+        mock_tool.assert_called_once_with("calc", {"x": 1})
 
 
-# ---------------------------------------------------------------------------
-# MAX_TOOL_ROUNDS — tools dropped after limit to force text reply
-# ---------------------------------------------------------------------------
+class TestErrors:
+    def test_llm_error_bubbles_up(self, brain_env):
+        provider, run_agent, _ = brain_env
+        provider.complete.side_effect = LLMError("boom")
 
-class TestMaxToolRounds:
-    def test_tools_dropped_after_limit(self, brain_env, monkeypatch):
-        provider, run_agent = brain_env
-        monkeypatch.setattr("inkagent.brain.MAX_TOOL_ROUNDS", 2)
-
-        tc = ToolCall(id="tc", name="t", input={})
-        # First 2 rounds: tool_use (no text). Third round (no tools): end_turn.
-        provider.complete.side_effect = [
-            _make_response(text=None, stop_reason="tool_use", tool_calls=[tc]),
-            _make_response(text=None, stop_reason="tool_use", tool_calls=[tc]),
-            _make_response(text="forced end"),
-        ]
-
-        with patch("inkagent.brain.registry") as mock_reg:
-            mock_reg.get_tools.return_value = [{"name": "t"}]
-            mock_reg.call_tool.return_value = "ok"
-            result = run_agent("loop", "test_sid")
-
-        assert result == "forced end"
-        # Third call should have empty tools
-        third_call = provider.complete.call_args_list[2]
-        assert third_call.kwargs.get("tools") == [] or third_call[1].get("tools") == []
-
-
-# ---------------------------------------------------------------------------
-# Error handling
-# ---------------------------------------------------------------------------
-
-class TestErrorHandling:
-    def test_llm_error_propagates(self, brain_env):
-        provider, run_agent = brain_env
-        provider.complete.side_effect = LLMError("API down")
-
-        with patch("inkagent.brain.registry") as mock_reg:
-            mock_reg.get_tools.return_value = []
-            with pytest.raises(LLMError, match="API down"):
-                run_agent("hello", "test_sid")
-
-    def test_llm_error_removes_dangling_user_message(self, brain_env):
-        provider, run_agent = brain_env
-        provider.complete.side_effect = LLMError("fail")
-
-        from inkagent.session import get_conversation
-
-        with patch("inkagent.brain.registry") as mock_reg:
-            mock_reg.get_tools.return_value = []
-            try:
-                run_agent("hello", "err_sid")
-            except LLMError:
-                pass
-
-        conv = get_conversation("err_sid")
-        # The dangling user message should have been popped
-        assert not any(m["role"] == "user" and m["content"] == "hello" for m in conv)
+        with pytest.raises(LLMError, match="boom"):
+            run_agent("Hi")

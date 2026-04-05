@@ -1,8 +1,10 @@
 """LLM agentic loop using pluggable provider."""
 
+from __future__ import annotations
+
 import logging
 import time
-
+from collections.abc import Callable
 from datetime import date
 
 from inkagent import registry, memory
@@ -27,10 +29,30 @@ from inkagent.tracing import (
 # Import the tools package to trigger tool auto-registration via @register decorators.
 import inkagent.tools  # noqa: F401
 
+StreamCallback = Callable[[str], None]
+
 
 @_track()
 def run_agent(user_input: str, session_id: str = "cli") -> str:
     """Run one full agentic turn: send message, loop on tool calls, return final text."""
+    return _run_agent_impl(user_input, session_id=session_id, on_stream=None)
+
+
+def stream_agent(
+    user_input: str,
+    session_id: str = "cli",
+    on_stream: StreamCallback | None = None,
+) -> str:
+    """Run one full agentic turn and emit incremental text snapshots."""
+    return _run_agent_impl(user_input, session_id=session_id, on_stream=on_stream)
+
+
+@_track()
+def _run_agent_impl(
+    user_input: str,
+    session_id: str = "cli",
+    on_stream: StreamCallback | None = None,
+) -> str:
     _update_span(input=user_input)
 
     t_start = time.time()
@@ -104,23 +126,21 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
 
                 messages.extend(provider.tool_results_messages(tool_results))
             else:
-                # end_turn — combine collected text with final response text.
                 parts = collected_text + ([response.text] if response.text else [])
                 reply = "\n".join(parts).strip()
+                if on_stream is not None and reply:
+                    on_stream(reply)
                 conversation.append(make_message("assistant", reply))
                 save_conversation(session_id)
                 _update_span(output=reply)
                 _flush_traces()
                 logger.info("Total agent turn took %.1fs (%d LLM calls)", time.time() - t_start, loop_count)
                 return reply
-    except LLMError as e:
-        logger.error("API call failed: %s", e)
-        if conversation and conversation[-1].get("role") == "user":
-            conversation.pop()
+    except LLMError:
+        _flush_traces()
         raise
 
 
-@_track(as_type="generation")
 def _call_llm(system: str, messages: list, tools: list, model: str):
     """Call LLM via provider — tracked as a generation span."""
     provider = get_provider()

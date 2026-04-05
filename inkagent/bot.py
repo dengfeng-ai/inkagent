@@ -3,12 +3,15 @@
 import asyncio
 import logging
 import os
+import threading
+import time
 
 from dotenv import load_dotenv
 load_dotenv()
 
 from telegram import BotCommand, Update  # noqa: E402
 from telegram.constants import ChatAction  # noqa: E402
+from telegram.error import BadRequest  # noqa: E402
 from telegram.ext import (  # noqa: E402
     ApplicationBuilder,
     CommandHandler,
@@ -17,7 +20,7 @@ from telegram.ext import (  # noqa: E402
     filters,
 )
 
-from inkagent.brain import run_agent  # noqa: E402
+from inkagent.brain import run_agent, stream_agent  # noqa: E402
 from inkagent.compression import force_compress  # noqa: E402
 from inkagent.providers import LLMError  # noqa: E402
 from inkagent.scheduler import run_scheduler  # noqa: E402
@@ -33,6 +36,8 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Telegram message length limit.
 MAX_MSG_LEN = 4096
+STREAM_THROTTLE_SECONDS = 0.4
+STREAM_PLACEHOLDER = "…"
 
 
 def _get_owner_id() -> int:
@@ -52,6 +57,66 @@ async def _send_long_message(update: Update, text: str) -> None:
     html = markdown_to_telegram_html(text)
     for i in range(0, len(html), MAX_MSG_LEN):
         await update.message.reply_text(html[i:i + MAX_MSG_LEN], parse_mode="HTML")
+
+
+class TelegramStreamBuffer:
+    """Stream text into Telegram by editing a single message with throttling."""
+
+    def __init__(self, update: Update) -> None:
+        self._update = update
+        self._message = None
+        self._latest_text = ""
+        self._last_sent_text = ""
+        self._last_sent_at = 0.0
+        self._lock = threading.Lock()
+
+    def push(self, text: str) -> None:
+        with self._lock:
+            self._latest_text = text
+
+    def should_flush(self, *, force: bool = False) -> bool:
+        with self._lock:
+            if not self._latest_text:
+                return False
+            if self._latest_text == self._last_sent_text and not force:
+                return False
+            if force:
+                return True
+            return (time.monotonic() - self._last_sent_at) >= STREAM_THROTTLE_SECONDS
+
+    async def flush(self, *, force: bool = False) -> None:
+        with self._lock:
+            text = self._latest_text
+        if not text:
+            return
+        if text == self._last_sent_text and not force:
+            return
+        await self._send_or_edit(text)
+
+    async def finalize(self, text: str) -> None:
+        self.push(text or STREAM_PLACEHOLDER)
+        await self.flush(force=True)
+
+    async def _send_or_edit(self, text: str) -> None:
+        html = markdown_to_telegram_html(text)
+        primary = html[:MAX_MSG_LEN] or STREAM_PLACEHOLDER
+        overflow = html[MAX_MSG_LEN:]
+
+        if self._message is None:
+            self._message = await self._update.message.reply_text(primary, parse_mode="HTML")
+        else:
+            try:
+                await self._message.edit_text(primary, parse_mode="HTML")
+            except BadRequest as exc:
+                if "message is not modified" not in str(exc).lower():
+                    raise
+
+        self._last_sent_text = text
+        self._last_sent_at = time.monotonic()
+
+        if overflow:
+            for i in range(0, len(overflow), MAX_MSG_LEN):
+                await self._update.message.reply_text(overflow[i:i + MAX_MSG_LEN], parse_mode="HTML")
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -95,23 +160,33 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     session_id = f"tg_{update.effective_chat.id}"
+    stream = TelegramStreamBuffer(update)
 
     async def keep_typing() -> None:
         """Send typing action every 4s until cancelled."""
         while True:
             await update.effective_chat.send_action(ChatAction.TYPING)
-            await asyncio.sleep(4)
+            if stream.should_flush():
+                await stream.flush()
+            await asyncio.sleep(0.4)
 
     typing_task = asyncio.create_task(keep_typing())
     try:
-        reply = await asyncio.to_thread(run_agent, user_text, session_id)
+        reply = await asyncio.to_thread(stream_agent, user_text, session_id, stream.push)
     except LLMError as e:
         logger.error("API call failed in session %s: %s", session_id, e)
         reply = f"[API error: {e}]"
     finally:
         typing_task.cancel()
+        try:
+            await typing_task
+        except asyncio.CancelledError:
+            pass
 
-    await _send_long_message(update, reply)
+    if stream.should_flush(force=True) or reply:
+        await stream.finalize(reply)
+    else:
+        await _send_long_message(update, reply)
 
 
 async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
