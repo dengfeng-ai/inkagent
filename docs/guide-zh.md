@@ -590,8 +590,22 @@ requires:
 
 ### 可观测性（可选）
 
+选择一个后端（或通过 `TRACING_PROVIDER` 显式指定）：
+
+**Langfuse** — `pip install -e ".[langfuse]"`
+
 | 变量 | 必填 | 说明 |
 |------|------|------|
 | `LANGFUSE_PUBLIC_KEY` | 否 | [Langfuse](https://langfuse.com) 公钥 |
 | `LANGFUSE_SECRET_KEY` | 否 | Langfuse 密钥 |
 | `LANGFUSE_HOST` | 否 | Langfuse 服务地址（默认：`https://cloud.langfuse.com`） |
+
+**Comet Opik** — `pip install -e ".[opik]"`
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `OPIK_API_KEY` | 否 | [Comet Opik](https://www.comet.com/site/products/opik/) API 密钥 |
+| `OPIK_WORKSPACE` | 否 | Opik 工作区名称 |
+| `OPIK_PROJECT_NAME` | 否 | Opik 项目名称（默认：`inkagent`） |
+
+后端会根据环境变量中的 key 自动检测，也可通过 `TRACING_PROVIDER=langfuse`、`opik` 或 `none` 显式指定。
