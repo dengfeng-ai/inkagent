@@ -100,31 +100,50 @@ class TestToolLoop:
 class TestStreaming:
     def test_stream_agent_invokes_callback_with_final_reply(self, brain_env):
         provider, _, stream_agent = brain_env
-        provider.complete.return_value = _make_response(text="hello world")
+
+        def fake_stream_complete(*, model, system, messages, tools, max_tokens, on_text):
+            on_text("hello ")
+            on_text("world")
+            return _make_response(text="hello world")
+
+        provider.stream_complete = MagicMock(side_effect=fake_stream_complete)
         seen = []
 
         reply = stream_agent("Hi", on_stream=seen.append)
 
         assert reply == "hello world"
-        assert seen == ["hello world"]
+        # Should receive incremental snapshots from deltas, plus the final push.
+        assert "hello" in seen[0]
+        assert "hello world" in seen[-1]
 
     @patch("inkagent.brain.registry.call_tool", return_value="42")
     def test_stream_agent_accumulates_tool_round_text(self, mock_tool, brain_env):
         provider, _, stream_agent = brain_env
-        provider.complete.side_effect = [
-            _make_response(
-                text="Thinking...",
-                stop_reason="tool_use",
-                tool_calls=[ToolCall(id="1", name="calc", input={"x": 1})],
-            ),
-            _make_response(text="Answer: 42", stop_reason="end_turn"),
-        ]
+
+        call_count = 0
+
+        def fake_stream_complete(*, model, system, messages, tools, max_tokens, on_text):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                on_text("Thinking...")
+                return _make_response(
+                    text="Thinking...",
+                    stop_reason="tool_use",
+                    tool_calls=[ToolCall(id="1", name="calc", input={"x": 1})],
+                )
+            else:
+                on_text("Answer: 42")
+                return _make_response(text="Answer: 42", stop_reason="end_turn")
+
+        provider.stream_complete = MagicMock(side_effect=fake_stream_complete)
         seen = []
 
         reply = stream_agent("What is 6*7?", on_stream=seen.append)
 
         assert reply == "Thinking...\nAnswer: 42"
-        assert seen == ["Thinking...\nAnswer: 42"]
+        # Second round should include text from both rounds.
+        assert any("Thinking..." in s and "Answer: 42" in s for s in seen)
         mock_tool.assert_called_once_with("calc", {"x": 1})
 
 

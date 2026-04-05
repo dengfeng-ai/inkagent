@@ -97,6 +97,14 @@ def _run_agent_impl(
     collected_text: list[str] = []
     loop_count = 0
 
+    # Build a per-chunk callback that pushes accumulated text to the stream.
+    def _on_text_delta(delta: str) -> None:
+        """Forward accumulated text (collected rounds + current) to the stream callback."""
+        _on_text_delta._buf += delta
+        full = "\n".join(collected_text + [_on_text_delta._buf]).strip()
+        if on_stream is not None and full:
+            on_stream(full)
+
     try:
         while True:
             loop_count += 1
@@ -105,7 +113,11 @@ def _run_agent_impl(
             current_tools = tools if loop_count <= MAX_TOOL_ROUNDS else []
 
             t_llm = time.time()
-            response = _call_llm(system, messages, current_tools, model)
+            _on_text_delta._buf = ""
+            if on_stream is not None:
+                response = _call_llm_stream(system, messages, current_tools, model, _on_text_delta)
+            else:
+                response = _call_llm(system, messages, current_tools, model)
             logger.info("LLM call #%d took %.1fs", loop_count, time.time() - t_llm)
 
             if response.stop_reason == "tool_use":
@@ -155,6 +167,35 @@ def _call_llm(system: str, messages: list, tools: list, model: str):
         messages=messages,
         tools=tools,
         max_tokens=MAX_REPLY_TOKENS,
+    )
+    _update_gen(
+        output=response.text,
+        usage_details={
+            "input": response.usage.input_tokens,
+            "output": response.usage.output_tokens,
+        },
+    )
+    return response
+
+
+def _call_llm_stream(
+    system: str, messages: list, tools: list, model: str,
+    on_text: Callable[[str], None],
+):
+    """Call LLM via provider with streaming — tracked as a generation span."""
+    provider = get_provider()
+    _update_gen(
+        model=model,
+        input={"system": system, "messages": messages, "tools": tools},
+        model_parameters={"max_tokens": MAX_REPLY_TOKENS},
+    )
+    response = provider.stream_complete(
+        model=model,
+        system=system,
+        messages=messages,
+        tools=tools,
+        max_tokens=MAX_REPLY_TOKENS,
+        on_text=on_text,
     )
     _update_gen(
         output=response.text,

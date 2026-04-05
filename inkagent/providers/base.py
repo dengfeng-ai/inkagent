@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -83,3 +84,27 @@ class LLMProvider(ABC):
         Each result dict has keys: tool_call_id, content.
         Returns a list of message dicts to extend into the messages list.
         """
+
+    def stream_complete(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: list[dict],
+        tools: list[dict],
+        max_tokens: int,
+        on_text: Callable[[str], None],
+    ) -> LLMResponse:
+        """Streaming completion — calls *on_text* with each text delta.
+
+        Default implementation falls back to non-streaming ``complete()``
+        and emits the full text as a single delta.  Providers override this
+        for true token-by-token streaming.
+        """
+        response = self.complete(
+            model=model, system=system, messages=messages,
+            tools=tools, max_tokens=max_tokens,
+        )
+        if response.text:
+            on_text(response.text)
+        return response

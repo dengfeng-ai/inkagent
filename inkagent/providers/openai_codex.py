@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Callable
 
 import httpx
 
@@ -127,9 +128,33 @@ class OpenAICodexProvider(LLMProvider):
         ]
         return [{"_codex_items": items}]
 
+    def stream_complete(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: list[dict],
+        tools: list[dict],
+        max_tokens: int,
+        on_text: Callable[[str], None],
+    ) -> LLMResponse:
+        input_items = self._build_input(messages)
+
+        payload: dict = {
+            "model": model,
+            "instructions": system,
+            "input": input_items,
+            "store": False,
+        }
+        if tools:
+            payload["tools"] = tools
+
+        raw = self._request(payload, on_text=on_text)
+        return self._parse_response(raw)
+
     # ── Internal helpers ─────────────────────────────────────────────
 
-    def _request(self, payload: dict) -> dict:
+    def _request(self, payload: dict, on_text: Callable[[str], None] | None = None) -> dict:
         """Send a streaming request to the Codex Responses API with retry.
 
         The Codex endpoint requires ``stream: true``.  We consume SSE events
@@ -176,7 +201,7 @@ class OpenAICodexProvider(LLMProvider):
                             time.sleep(delay)
                             continue
                         raise err
-                    return self._consume_sse(resp)
+                    return self._consume_sse(resp, on_text=on_text)
             except httpx.RequestError as e:
                 err = LLMError(f"Codex request failed: {e}", original=e)
                 if attempt < _MAX_RETRIES:
@@ -194,8 +219,14 @@ class OpenAICodexProvider(LLMProvider):
         raise last_error or LLMError("Codex request failed after retries.")
 
     @staticmethod
-    def _consume_sse(resp: httpx.Response) -> dict:
+    def _consume_sse(
+        resp: httpx.Response,
+        on_text: Callable[[str], None] | None = None,
+    ) -> dict:
         """Read SSE lines and return the ``response.completed`` data payload.
+
+        When *on_text* is provided, ``response.output_text.delta`` events are
+        forwarded to the callback for real-time streaming.
 
         Also handles ``response.failed`` and ``error`` events from the stream.
         """
@@ -213,7 +244,12 @@ class OpenAICodexProvider(LLMProvider):
 
             event_type = event.get("type", "")
 
-            if event_type == "response.completed":
+            if event_type == "response.output_text.delta":
+                if on_text is not None:
+                    delta = event.get("delta", "")
+                    if delta:
+                        on_text(delta)
+            elif event_type == "response.completed":
                 completed = event.get("response", event)
             elif event_type == "response.failed":
                 error_info = event.get("response", {}).get("error", {})
