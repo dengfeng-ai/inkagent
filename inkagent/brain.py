@@ -153,6 +153,7 @@ def _run_agent_impl(
         raise
 
 
+@_track(as_type="generation")
 def _call_llm(system: str, messages: list, tools: list, model: str):
     """Call LLM via provider — tracked as a generation span."""
     provider = get_provider()
@@ -178,6 +179,7 @@ def _call_llm(system: str, messages: list, tools: list, model: str):
     return response
 
 
+@_track(as_type="generation")
 def _call_llm_stream(
     system: str, messages: list, tools: list, model: str,
     on_text: Callable[[str], None],
