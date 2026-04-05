@@ -12,7 +12,7 @@ from inkagent.config import (
 from inkagent.prompts import SUMMARY_PROMPT
 from inkagent.providers import get_provider, get_small_model, LLMError
 from inkagent.session import make_message
-from inkagent.tracing import observe, get_langfuse
+from inkagent.tracing import track, update_current_span, update_current_generation
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def _format_messages_for_summary(messages: list[dict]) -> str:
     return "\n".join(lines)
 
 
-@observe(as_type="generation")
+@track(as_type="generation")
 def _summarize_messages(messages: list[dict]) -> str:
     """Use a small model to summarize old conversation messages."""
     text = _format_messages_for_summary(messages)
@@ -57,8 +57,7 @@ def _summarize_messages(messages: list[dict]) -> str:
     model = get_small_model()
 
     logger.info("Summarizing %d messages for context compression", len(messages))
-    lf = get_langfuse()
-    lf.update_current_generation(
+    update_current_generation(
         name="compression",
         model=model,
         input=prompt,
@@ -70,7 +69,7 @@ def _summarize_messages(messages: list[dict]) -> str:
             prompt=prompt,
             max_tokens=1024,
         )
-        lf.update_current_generation(output=result)
+        update_current_generation(output=result)
         return result
     except LLMError as e:
         logger.error("Summarization API call failed: %s", e)

@@ -5,16 +5,15 @@ import logging
 from inkagent import memory
 from inkagent.prompts import PROMOTION_PROMPT
 from inkagent.providers import get_provider, get_small_model, LLMError
-from inkagent.tracing import observe, get_langfuse
+from inkagent.tracing import track, update_current_span, update_current_generation
 
 logger = logging.getLogger(__name__)
 
 
-@observe(as_type="generation")
+@track(as_type="generation")
 def _promote_llm(prompt: str, model: str) -> str:
     """Call LLM for promotion — tracked as a generation span."""
-    lf = get_langfuse()
-    lf.update_current_generation(
+    update_current_generation(
         name="promotion-llm",
         model=model,
         input=prompt,
@@ -25,11 +24,11 @@ def _promote_llm(prompt: str, model: str) -> str:
         prompt=prompt,
         max_tokens=1024,
     )
-    lf.update_current_generation(output=result)
+    update_current_generation(output=result)
     return result
 
 
-@observe()
+@track()
 def maybe_promote() -> None:
     """Check if yesterday's daily log needs promotion; if so, ask LLM to curate."""
     if not memory.needs_promotion():
@@ -40,15 +39,14 @@ def maybe_promote() -> None:
     model = get_small_model()
 
     logger.info("Running memory promotion for %s", ctx["date"])
-    lf = get_langfuse()
-    lf.update_current_span(name="promotion", input={"date": ctx["date"]})
+    update_current_span(name="promotion", input={"date": ctx["date"]})
     try:
         text = _promote_llm(prompt, model)
     except LLMError as e:
         logger.error("Memory promotion API call failed: %s", e)
         return
 
-    lf.update_current_span(output=text)
+    update_current_span(output=text)
 
     if text == "NOTHING":
         result = memory.apply_promotion("")

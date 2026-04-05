@@ -17,16 +17,21 @@ from inkagent.providers import get_provider, get_model, LLMError
 
 logger = logging.getLogger(__name__)
 
-from inkagent.tracing import observe as _observe, get_langfuse as _get_langfuse
+from inkagent.tracing import (
+    track as _track,
+    update_current_span as _update_span,
+    update_current_generation as _update_gen,
+    flush as _flush_traces,
+)
 
 # Import the tools package to trigger tool auto-registration via @register decorators.
 import inkagent.tools  # noqa: F401
 
 
-@_observe()
+@_track()
 def run_agent(user_input: str, session_id: str = "cli") -> str:
     """Run one full agentic turn: send message, loop on tool calls, return final text."""
-    _get_langfuse().update_current_span(input=user_input)
+    _update_span(input=user_input)
 
     t_start = time.time()
     _session.current_session_id = session_id
@@ -104,7 +109,8 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
                 reply = "\n".join(parts).strip()
                 conversation.append(make_message("assistant", reply))
                 save_conversation(session_id)
-                _get_langfuse().update_current_span(output=reply)
+                _update_span(output=reply)
+                _flush_traces()
                 logger.info("Total agent turn took %.1fs (%d LLM calls)", time.time() - t_start, loop_count)
                 return reply
     except LLMError as e:
@@ -114,12 +120,11 @@ def run_agent(user_input: str, session_id: str = "cli") -> str:
         raise
 
 
-@_observe(as_type="generation")
+@_track(as_type="generation")
 def _call_llm(system: str, messages: list, tools: list, model: str):
-    """Call LLM via provider — tracked as a generation span in Langfuse."""
+    """Call LLM via provider — tracked as a generation span."""
     provider = get_provider()
-    lf = _get_langfuse()
-    lf.update_current_generation(
+    _update_gen(
         model=model,
         input={"system": system, "messages": messages, "tools": tools},
         model_parameters={"max_tokens": MAX_REPLY_TOKENS},
@@ -131,7 +136,7 @@ def _call_llm(system: str, messages: list, tools: list, model: str):
         tools=tools,
         max_tokens=MAX_REPLY_TOKENS,
     )
-    lf.update_current_generation(
+    _update_gen(
         output=response.text,
         usage_details={
             "input": response.usage.input_tokens,
@@ -141,11 +146,10 @@ def _call_llm(system: str, messages: list, tools: list, model: str):
     return response
 
 
-@_observe(as_type="tool")
+@_track(as_type="tool")
 def _execute_tool(name: str, tool_input: dict) -> str:
-    """Execute a tool — tracked as a tool span in Langfuse."""
-    lf = _get_langfuse()
-    lf.update_current_span(input={"tool": name, **tool_input})
+    """Execute a tool — tracked as a tool span."""
+    _update_span(input={"tool": name, **tool_input})
     result = registry.call_tool(name, tool_input)
-    lf.update_current_span(output=result)
+    _update_span(output=result)
     return result

@@ -25,6 +25,12 @@ project root/
 │   ├── telegram_format.py   # Markdown → Telegram HTML converter
 │   ├── vector_store.py      # sqlite-vec vector store for semantic search over daily logs
 │   ├── codex_auth.py        # OAuth 2.0 + PKCE auth for OpenAI Codex (ChatGPT subscription)
+│   ├── tracing/             # Pluggable observability abstraction
+│   │   ├── __init__.py      # Factory: get_tracer() + convenience functions (track, update_current_span, update_current_generation)
+│   │   ├── base.py          # TracingProvider ABC
+│   │   ├── langfuse.py      # Langfuse adapter
+│   │   ├── opik.py          # Comet Opik adapter
+│   │   └── noop.py          # No-op fallback (no backend configured)
 │   ├── providers/           # Pluggable LLM provider abstraction
 │   │   ├── __init__.py      # Factory: get_provider(), get_model(), get_small_model()
 │   │   ├── base.py          # LLMProvider ABC + LLMResponse/ToolCall/LLMError types
@@ -78,7 +84,7 @@ Instruction skills are auto-discovered from `skills/` — adding a skill is just
 - `trafilatura` — HTML content extraction for `web_fetch`
 - `PyYAML` — YAML frontmatter parsing for instruction skills
 - `croniter` — Cron expression parsing for scheduled tasks
-- `langfuse` — Optional observability tracing for LLM calls and tool executions
+- `langfuse` / `opik` — Optional observability tracing for LLM calls and tool executions (pluggable via `inkagent/tracing/`)
 
 ## Common Commands
 
@@ -110,6 +116,7 @@ cat memory/USER.md
 | `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `openai-codex` |
 | `LLM_MODEL` | per-provider | Main model (e.g. `claude-sonnet-4-20250514`, `gpt-4o`, `gpt-5.4`) |
 | `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (e.g. `claude-haiku-4-5-20251001`, `gpt-4o-mini`, `gpt-5.4-mini`) |
+| `TRACING_PROVIDER` | auto-detect | `langfuse`, `opik`, or `none` (auto-detects from `LANGFUSE_PUBLIC_KEY` / `OPIK_API_KEY`) |
 | `BRAVE_API_KEY` | — | Brave Search API key (required for `web_search` tool) |
 | `GMAIL_ADDRESS` | — | Gmail address (required for Gmail tools) |
 | `GMAIL_APP_PASSWORD` | — | Gmail App Password (required for Gmail tools, generate at myaccount.google.com/apppasswords) |
@@ -339,7 +346,7 @@ Mark with `@pytest.mark.slow`, skip by default. Verify "send message → get rep
 - **Isolate the filesystem with `tmp_path`** — monkeypatch path constants to point at `tmp_path`. Paths need to be patched in **both** `inkagent.config` and in modules that import them at module level (e.g. `inkagent.memory.MEMORY_DIR`, `inkagent.session.CONVERSATIONS_DIR`, `inkagent.skill_loader.BUILTIN_SKILLS_DIR`)
 - **Clean up module-level global state between tests** — several modules use global dicts/lists: `registry._skills`, `session._sessions` + `session._session_files`, `scheduler._jobs`. Use fixtures that save/restore or clear these between tests
 - **Mock at the outermost boundary** — mock LLM HTTP calls and external APIs, not internal functions
-- **Langfuse tracing** — `tracing.py` already returns no-op decorators and a silent stub when `LANGFUSE_PUBLIC_KEY` is unset. No fixture needed — just don't set the env var in tests
+- **Tracing** — `inkagent/tracing/` uses `NoopTracingProvider` when no backend keys are set. No fixture needed — just don't set tracing env vars in tests
 - **Vector store** — `recall_memory` and `append_daily_log` lazy-import `vector_store` with try/except fallback. No special handling needed in tests — they degrade to keyword search naturally
 - **No API keys required** — all Layer 1 and Layer 2 tests must run without any env vars. Tests requiring keys use `@pytest.mark.slow`
 
