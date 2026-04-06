@@ -161,14 +161,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     session_id = f"tg_{update.effective_chat.id}"
     stream = TelegramStreamBuffer(update)
+    stop_typing = asyncio.Event()
 
     async def keep_typing() -> None:
-        """Send typing action every 4s until cancelled."""
-        while True:
+        """Send typing action and flush stream buffer until stopped."""
+        while not stop_typing.is_set():
             await update.effective_chat.send_action(ChatAction.TYPING)
             if stream.should_flush():
                 await stream.flush()
-            await asyncio.sleep(0.4)
+            try:
+                await asyncio.wait_for(stop_typing.wait(), timeout=0.4)
+            except asyncio.TimeoutError:
+                pass
 
     typing_task = asyncio.create_task(keep_typing())
     try:
@@ -177,11 +181,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.error("API call failed in session %s: %s", session_id, e)
         reply = f"[API error: {e}]"
     finally:
-        typing_task.cancel()
-        try:
-            await typing_task
-        except asyncio.CancelledError:
-            pass
+        stop_typing.set()
+        await typing_task
 
     if stream.should_flush(force=True) or reply:
         await stream.finalize(reply)

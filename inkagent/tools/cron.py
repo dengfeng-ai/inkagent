@@ -48,7 +48,7 @@ from inkagent.scheduler import DEFAULT_TIMEZONE, add_job, remove_job, list_jobs
 )
 def create_cron(id: str, cron: str, prompt: str, timezone: str = DEFAULT_TIMEZONE, silent_ok: bool = False) -> str:
     try:
-        session_id = _session.current_session_id
+        session_id = _session.current_session_id.get()
         job = add_job(job_id=id, cron_expr=cron, prompt=prompt, session_id=session_id, tz=timezone, silent_ok=silent_ok)
         mode = " (heartbeat mode)" if job.get("silent_ok") else ""
         result = (

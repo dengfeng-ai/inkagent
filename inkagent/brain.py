@@ -56,103 +56,108 @@ def _run_agent_impl(
     _update_span(input=user_input)
 
     t_start = time.time()
-    _session.current_session_id = session_id
+    _session.current_session_id.set(session_id)
     maybe_promote()
 
-    conversation = get_conversation(session_id)
-    conversation.append(make_message("user", user_input))
-
-    agents = memory.get_agents()
-    identity = memory.get_identity()
-    soul = memory.get_soul()
-    user_profile = memory.get_user_profile()
-    long_term_memory = memory.get_long_term_memory()
-    daily_logs = memory.get_daily_logs()
-    instruction_skills = load_skills()
-    skill_prompt = build_skill_prompt(instruction_skills)
-
-    system = SYSTEM_PROMPT.format(
-        agents=agents,
-        current_date=date.today().isoformat(),
-        identity=identity,
-        soul=soul,
-        user_profile=user_profile,
-        long_term_memory=long_term_memory if long_term_memory else "(no memories yet)",
-        daily_logs=daily_logs if daily_logs else "(no daily logs yet)",
-        skills=skill_prompt,
-    )
-
-    if memory.is_first_run():
-        system += ONBOARDING_HINT
-
-    provider = get_provider()
-    model = get_model()
-    raw_tools = registry.get_tools()
-    tools = provider.format_tools(raw_tools)
-
-    # Compress conversation if approaching context window limit.
-    maybe_compress(conversation, system, tools)
-
-    # Strip extra fields (e.g. timestamp) before sending to the LLM.
-    messages = [{"role": m["role"], "content": m["content"]} for m in conversation]
-
-    collected_text: list[str] = []
-    loop_count = 0
-
-    # Build a per-chunk callback that pushes accumulated text to the stream.
-    def _on_text_delta(delta: str) -> None:
-        """Forward accumulated text (collected rounds + current) to the stream callback."""
-        _on_text_delta._buf += delta
-        full = "\n".join(collected_text + [_on_text_delta._buf]).strip()
-        if on_stream is not None and full:
-            on_stream(full)
-
+    lock = _session.get_session_lock(session_id)
+    lock.acquire()
     try:
-        while True:
-            loop_count += 1
+        conversation = get_conversation(session_id)
+        conversation.append(make_message("user", user_input))
 
-            # On the last allowed round, drop tools to force a text reply.
-            current_tools = tools if loop_count <= MAX_TOOL_ROUNDS else []
+        agents = memory.get_agents()
+        identity = memory.get_identity()
+        soul = memory.get_soul()
+        user_profile = memory.get_user_profile()
+        long_term_memory = memory.get_long_term_memory()
+        daily_logs = memory.get_daily_logs()
+        instruction_skills = load_skills()
+        skill_prompt = build_skill_prompt(instruction_skills)
 
-            t_llm = time.time()
-            _on_text_delta._buf = ""
-            if on_stream is not None:
-                response = _call_llm_stream(system, messages, current_tools, model, _on_text_delta)
-            else:
-                response = _call_llm(system, messages, current_tools, model)
-            logger.info("LLM call #%d took %.1fs", loop_count, time.time() - t_llm)
+        system = SYSTEM_PROMPT.format(
+            agents=agents,
+            current_date=date.today().isoformat(),
+            identity=identity,
+            soul=soul,
+            user_profile=user_profile,
+            long_term_memory=long_term_memory if long_term_memory else "(no memories yet)",
+            daily_logs=daily_logs if daily_logs else "(no daily logs yet)",
+            skills=skill_prompt,
+        )
 
-            if response.stop_reason == "tool_use":
-                if response.text:
-                    collected_text.append(response.text)
+        if memory.is_first_run():
+            system += ONBOARDING_HINT
 
-                messages.append(provider.assistant_message(response))
+        provider = get_provider()
+        model = get_model()
+        raw_tools = registry.get_tools()
+        tools = provider.format_tools(raw_tools)
 
-                tool_results = []
-                for tc in response.tool_calls:
-                    t_tool = time.time()
-                    result = _execute_tool(tc.name, tc.input)
-                    logger.info("Tool %s took %.1fs", tc.name, time.time() - t_tool)
-                    tool_results.append({
-                        "tool_call_id": tc.id,
-                        "content": result,
-                    })
+        # Compress conversation if approaching context window limit.
+        maybe_compress(conversation, system, tools)
 
-                messages.extend(provider.tool_results_messages(tool_results))
-            else:
-                parts = collected_text + ([response.text] if response.text else [])
-                reply = "\n".join(parts).strip()
-                if on_stream is not None and reply:
-                    on_stream(reply)
-                conversation.append(make_message("assistant", reply))
-                save_conversation(session_id)
-                _update_span(output=reply)
-                _flush_traces()
-                logger.info("Total agent turn took %.1fs (%d LLM calls)", time.time() - t_start, loop_count)
-                return reply
-    except LLMError:
-        _flush_traces()
-        raise
+        # Strip extra fields (e.g. timestamp) before sending to the LLM.
+        messages = [{"role": m["role"], "content": m["content"]} for m in conversation]
+
+        collected_text: list[str] = []
+        loop_count = 0
+
+        # Build a per-chunk callback that pushes accumulated text to the stream.
+        def _on_text_delta(delta: str) -> None:
+            """Forward accumulated text (collected rounds + current) to the stream callback."""
+            _on_text_delta._buf += delta
+            full = "\n".join(collected_text + [_on_text_delta._buf]).strip()
+            if on_stream is not None and full:
+                on_stream(full)
+
+        try:
+            while True:
+                loop_count += 1
+
+                # On the last allowed round, drop tools to force a text reply.
+                current_tools = tools if loop_count <= MAX_TOOL_ROUNDS else []
+
+                t_llm = time.time()
+                _on_text_delta._buf = ""
+                if on_stream is not None:
+                    response = _call_llm_stream(system, messages, current_tools, model, _on_text_delta)
+                else:
+                    response = _call_llm(system, messages, current_tools, model)
+                logger.info("LLM call #%d took %.1fs", loop_count, time.time() - t_llm)
+
+                if response.stop_reason == "tool_use":
+                    if response.text:
+                        collected_text.append(response.text)
+
+                    messages.append(provider.assistant_message(response))
+
+                    tool_results = []
+                    for tc in response.tool_calls:
+                        t_tool = time.time()
+                        result = _execute_tool(tc.name, tc.input)
+                        logger.info("Tool %s took %.1fs", tc.name, time.time() - t_tool)
+                        tool_results.append({
+                            "tool_call_id": tc.id,
+                            "content": result,
+                        })
+
+                    messages.extend(provider.tool_results_messages(tool_results))
+                else:
+                    parts = collected_text + ([response.text] if response.text else [])
+                    reply = "\n".join(parts).strip()
+                    if on_stream is not None and reply:
+                        on_stream(reply)
+                    conversation.append(make_message("assistant", reply))
+                    save_conversation(session_id)
+                    _update_span(output=reply)
+                    _flush_traces()
+                    logger.info("Total agent turn took %.1fs (%d LLM calls)", time.time() - t_start, loop_count)
+                    return reply
+        except LLMError:
+            _flush_traces()
+            raise
+    finally:
+        lock.release()
 
 
 @_track(as_type="generation")

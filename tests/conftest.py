@@ -122,4 +122,5 @@ def clean_session():
     yield
     session._sessions.clear()
     session._session_files.clear()
-    session.current_session_id = "cli"
+    session._locks.clear()
+    session.current_session_id.set("cli")

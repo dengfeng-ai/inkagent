@@ -1,6 +1,8 @@
 """Conversation session management and JSON persistence."""
 
+import contextvars
 import json
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -13,8 +15,22 @@ _sessions: dict[str, list[dict]] = {}
 _session_files: dict[str, Path] = {}
 
 # Tracks the session_id of the currently running agent turn.
-# Skills can read this to bind actions to the active session.
-current_session_id: str = "cli"
+# Uses ContextVar so each thread gets its own value — safe under concurrency.
+current_session_id: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "current_session_id", default="cli"
+)
+
+# Per-session locks to serialize conversation mutations.
+_locks: dict[str, threading.Lock] = {}
+_locks_guard = threading.Lock()
+
+
+def get_session_lock(session_id: str) -> threading.Lock:
+    """Return (or create) a lock for the given session_id."""
+    with _locks_guard:
+        if session_id not in _locks:
+            _locks[session_id] = threading.Lock()
+        return _locks[session_id]
 
 
 def get_conversation(session_id: str) -> list[dict]:
@@ -62,8 +78,10 @@ def inject_message(session_id: str, role: str, content: str) -> None:
     """Inject a message into a session's conversation history and persist it.
 
     Used to bridge scheduled task replies into the user's main session so
-    follow-up questions have context.
+    follow-up questions have context.  Acquires the session lock to avoid
+    racing with a concurrent agent turn on the same session.
     """
-    conversation = get_conversation(session_id)
-    conversation.append(make_message(role, content))
-    save_conversation(session_id)
+    with get_session_lock(session_id):
+        conversation = get_conversation(session_id)
+        conversation.append(make_message(role, content))
+        save_conversation(session_id)
