@@ -56,6 +56,7 @@ project root/
 │   └── skill_name/
 │       └── SKILL.md
 ├── memory/                  # All memory (gitignored)
+│   ├── AGENTS.md
 │   ├── IDENTITY.md
 │   ├── SOUL.md
 │   ├── USER.md
@@ -92,6 +93,10 @@ Instruction skills are auto-discovered from `skills/` — adding a skill is just
 # Install (editable mode for development)
 pip install -e .
 
+# Install with optional tracing backends
+pip install -e ".[langfuse]"    # Langfuse tracing
+pip install -e ".[opik]"        # Comet Opik tracing
+
 # Run the CLI (default: Anthropic Claude)
 python -m inkagent
 # or: inkagent
@@ -116,15 +121,16 @@ cat memory/USER.md
 | `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `openai-codex` |
 | `LLM_MODEL` | per-provider | Main model (e.g. `claude-sonnet-4-20250514`, `gpt-4o`, `gpt-5.4`) |
 | `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (e.g. `claude-haiku-4-5-20251001`, `gpt-4o-mini`, `gpt-5.4-mini`) |
-| `TRACING_PROVIDER` | auto-detect | `langfuse`, `opik`, or `none` (auto-detects from `LANGFUSE_PUBLIC_KEY` / `OPIK_API_KEY`) |
+| `TRACING_PROVIDER` | auto-detect | `langfuse`, `opik`, or `none` (auto-detects from `LANGFUSE_PUBLIC_KEY` / `OPIK_API_KEY`). Requires the matching optional dependency: `pip install -e ".[langfuse]"` or `pip install -e ".[opik]"` |
 | `BRAVE_API_KEY` | — | Brave Search API key (required for `web_search` tool) |
 | `GMAIL_ADDRESS` | — | Gmail address (required for Gmail tools) |
 | `GMAIL_APP_PASSWORD` | — | Gmail App Password (required for Gmail tools, generate at myaccount.google.com/apppasswords) |
 
 ## Memory System
 
-Four-tier Markdown memory in `memory/`:
+Markdown memory files in `memory/`, injected as bootstrap context into the system prompt on every turn:
 
+- **`AGENTS.md`** — Agent behavior rules and working guidelines (tool usage, persistence rules, memory rules, file safety, email rules). Injected into the system prompt `<instructions>` block. User-editable — customize how the agent operates without touching Python code. Auto-seeded with a default template on first access.
 - **`IDENTITY.md`** — Agent identity metadata (name, creature type, vibe, emoji, avatar). Injected into the system prompt. Updated by the LLM via `update_identity` tool when the user sets the agent's name, emoji, or avatar.
 - **`SOUL.md`** — Agent behavioral rules (core truths, boundaries, tone, continuity). Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (tone, language, boundaries).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).

@@ -62,6 +62,7 @@ def _run_agent_impl(
     conversation = get_conversation(session_id)
     conversation.append(make_message("user", user_input))
 
+    agents = memory.get_agents()
     identity = memory.get_identity()
     soul = memory.get_soul()
     user_profile = memory.get_user_profile()
@@ -71,6 +72,7 @@ def _run_agent_impl(
     skill_prompt = build_skill_prompt(instruction_skills)
 
     system = SYSTEM_PROMPT.format(
+        agents=agents,
         current_date=date.today().isoformat(),
         identity=identity,
         soul=soul,

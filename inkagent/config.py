@@ -18,6 +18,7 @@ CONVERSATIONS_DIR = os.path.join(DATA_DIR, "conversations")
 CRONS_PATH = os.path.join(MEMORY_DIR, "crons.json")
 
 # Memory files
+AGENTS_PATH = os.path.join(MEMORY_DIR, "AGENTS.md")
 IDENTITY_PATH = os.path.join(MEMORY_DIR, "IDENTITY.md")
 SOUL_PATH = os.path.join(MEMORY_DIR, "SOUL.md")
 USER_PATH = os.path.join(MEMORY_DIR, "USER.md")
