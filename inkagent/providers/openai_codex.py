@@ -229,8 +229,14 @@ class OpenAICodexProvider(LLMProvider):
         forwarded to the callback for real-time streaming.
 
         Also handles ``response.failed`` and ``error`` events from the stream.
+
+        The Codex API may return an empty ``output`` array in the
+        ``response.completed`` event while the actual output items are
+        delivered incrementally via ``response.output_item.done`` events.
+        We collect those items and backfill if needed.
         """
         completed: dict = {}
+        streamed_items: list[dict] = []
         for line in resp.iter_lines():
             if not line.startswith("data: "):
                 continue
@@ -249,6 +255,10 @@ class OpenAICodexProvider(LLMProvider):
                     delta = event.get("delta", "")
                     if delta:
                         on_text(delta)
+            elif event_type == "response.output_item.done":
+                item = event.get("item")
+                if item:
+                    streamed_items.append(item)
             elif event_type == "response.completed":
                 completed = event.get("response", event)
             elif event_type == "response.failed":
@@ -262,6 +272,11 @@ class OpenAICodexProvider(LLMProvider):
 
         if not completed:
             raise LLMError("Codex stream ended without a response.completed event.")
+
+        # Backfill output from streamed items when the completed event is empty.
+        if not completed.get("output") and streamed_items:
+            completed["output"] = streamed_items
+
         return completed
 
     @staticmethod
