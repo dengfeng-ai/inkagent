@@ -24,8 +24,6 @@ SOUL_PATH = os.path.join(MEMORY_DIR, "SOUL.md")
 USER_PATH = os.path.join(MEMORY_DIR, "USER.md")
 LONG_TERM_PATH = os.path.join(MEMORY_DIR, "MEMORY.md")
 HEARTBEAT_PATH = os.path.join(MEMORY_DIR, "HEARTBEAT.md")
-TASKS_PATH = os.path.join(MEMORY_DIR, "TASKS.md")
-TASKS_ARCHIVE_DIR = os.path.join(MEMORY_DIR, "tasks_archive")
 DB_PATH = os.path.join(MEMORY_DIR, "memory.db")
 
 # Skills directory (markdown instruction skills, edited by the user directly)

@@ -12,7 +12,6 @@ from inkagent.memory import (
     MEMORY_TEMPLATE,
     PROMOTED_MARKER,
     SOUL_TEMPLATE,
-    TASKS_TEMPLATE,
     USER_TEMPLATE,
 )
 
@@ -43,10 +42,6 @@ class TestTemplateSeeding:
     def test_get_long_term_memory_seeds_template(self):
         result = memory.get_long_term_memory()
         assert result == MEMORY_TEMPLATE.strip()
-
-    def test_read_tasks_seeds_template(self):
-        result = memory.read_tasks()
-        assert TASKS_TEMPLATE.strip() in result.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -94,11 +89,6 @@ class TestUpdate:
         memory.update_user_profile("new user")
         with open(memory.USER_PATH) as f:
             assert f.read() == "new user"
-
-    def test_write_tasks(self):
-        memory.write_tasks("task content")
-        with open(memory.TASKS_PATH) as f:
-            assert f.read() == "task content"
 
 
 # ---------------------------------------------------------------------------

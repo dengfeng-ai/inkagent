@@ -493,12 +493,11 @@ requires:
 
 ### Bundled Skills
 
-The repo ships with two skills under `skills/`:
+The repo ships with one skill under `skills/`:
 
 | Skill | Description |
 |-------|-------------|
 | `heartbeat` | Periodic background check workflow (used with cron) |
-| `autopilot` | Autonomously execute tasks from `memory/TASKS.md` |
 
 ---
 

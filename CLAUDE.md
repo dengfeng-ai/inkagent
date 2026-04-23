@@ -42,8 +42,7 @@ project root/
 │       ├── cron.py          # create_cron, list_crons, delete_cron tools
 │       ├── web_search.py    # web_search tool (Brave Search API)
 │       ├── web_fetch.py     # web_fetch tool (HTTP + trafilatura)
-│       ├── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
-│       └── tasks.py         # add_task, list_tasks, update_task tools (autopilot task queue)
+│       └── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
 ├── skills/                  # Instruction skills (git-tracked, user-edited)
 │   └── skill_name/
 │       └── SKILL.md
@@ -53,9 +52,6 @@ project root/
 │   ├── SOUL.md
 │   ├── USER.md
 │   ├── MEMORY.md
-│   ├── TASKS.md
-│   ├── tasks_archive/       # Auto-archived completed tasks
-│   │   └── YYYY-MM.md
 │   └── daily/
 │       └── YYYY-MM-DD.md
 ├── pyproject.toml           # Package metadata + dependencies
@@ -126,7 +122,6 @@ Markdown memory files in `memory/`, injected as bootstrap context into the syste
 - **`SOUL.md`** — Agent behavioral rules (core truths, boundaries, tone, continuity). Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (tone, language, boundaries).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
 - **`MEMORY.md`** — Long-term curated memory. Injected into system prompt. Auto-seeded with a `# MEMORY.md` header template on first access. Writable via `save_memory` tool (for explicit "remember this" requests) and via the automatic promotion system.
-- **`TASKS.md`** — Autopilot task queue. Not injected into system prompt (to save tokens). Auto-seeded with a template on first access. Managed via `add_task`, `list_tasks`, `update_task` tools. Tasks are executed automatically by the heartbeat cron cycle via the autopilot skill. Completed tasks (`[x]`) are auto-archived to `memory/tasks_archive/YYYY-MM.md` after 3 days — triggered automatically when `list_tasks` or `add_task` runs.
 - **`daily/YYYY-MM-DD.md`** — Daily logs. Append-only, one file per day. Today's + yesterday's logs injected into system prompt. Updated via `log_daily` tool for transient notes (decisions, topics, action items). Each entry is also indexed into the vector store for semantic search.
 - **`memory.db`** — sqlite-vec database for semantic search over daily logs. Auto-created when an embedding provider is available. Not required — system degrades to keyword search without it.
 
@@ -159,17 +154,6 @@ Heartbeat is a special use of the cron system for periodic background checks (em
 - **`silent_ok` flag on cron jobs** — When set, replies of `HEARTBEAT_OK` are swallowed silently
 
 Setup: create a cron job with `silent_ok=true` whose prompt tells the agent to run the heartbeat skill. The agent reads the checklist, runs the checks, and either reports findings or replies `HEARTBEAT_OK` to stay silent.
-
-### Autopilot
-
-Autopilot enables the agent to autonomously execute tasks from a queue without user prompting. It is integrated into the heartbeat cycle — each heartbeat trigger checks `memory/TASKS.md` for pending tasks and executes them.
-
-Components:
-- **`memory/TASKS.md`** — Task queue file (auto-seeded on first access). Tasks have four status markers: `[ ]` pending, `[~]` in progress, `[x]` completed, `[!]` blocked. Each task tracks timestamps (`created`, `updated`, `completed`). Completed tasks are auto-archived to `memory/tasks_archive/YYYY-MM.md` after 3 days
-- **`skills/autopilot/SKILL.md`** — Instruction skill teaching the agent the autopilot workflow (read tasks, pick highest priority, execute, update status, log results)
-- **`inkagent/tools/tasks.py`** — `add_task`, `list_tasks`, `update_task` tools for managing the task queue
-
-The heartbeat skill checks for pending autopilot tasks before running its regular checklist. When a task is found, the agent reads the autopilot skill instructions, works on the task, updates the task status, and logs results to the daily log. No separate cron job is needed.
 
 ## Session Control Commands
 
@@ -217,9 +201,6 @@ Built-in tools:
 - `gmail_read` — reads full email content by UID (includes attachments list, Message-ID for replies)
 - `gmail_send` — sends or replies to email via SMTP (supports In-Reply-To threading)
 - `gmail_mark_read` — marks one or more emails as read by UID (batch support)
-- `add_task` — adds a task to the autopilot queue (`memory/TASKS.md`) with description, priority, repo (owner/repo), and context. Auto-adds `created: YYYY-MM-DD`
-- `list_tasks` — lists tasks from the autopilot queue, optionally filtered by status (pending, in_progress, completed, blocked). Triggers auto-archiving of old completed tasks
-- `update_task` — updates a task's status (pending, in_progress, completed, blocked) with an optional note. Auto-adds `completed: YYYY-MM-DD` for completed tasks, `updated: YYYY-MM-DD` for other status changes
 
 ### Instruction Skills (Markdown files)
 
@@ -313,7 +294,6 @@ Modules with clear input/output and no external dependencies. Use `tmp_path` to 
 | `skill_loader.py` | YAML frontmatter parsing, skill discovery |
 | `registry.py` | Tool registration, schema validation, duplicate handling |
 | `tools/files.py` | Path guard `_check_writable` (already tested) |
-| `tools/tasks.py` | Task parsing, status update, auto-archiving |
 
 **Layer 2 — Interface contract tests (mock external dependencies)**
 
@@ -354,9 +334,8 @@ Each step is independently runnable and committable:
 4. **`test_session.py`** — conversation CRUD, JSON persistence, reset, inject
 5. **`test_compression.py`** — `estimate_tokens` pure logic; `maybe_compress`/`force_compress` with mocked `_summarize_messages`
 6. **`test_skill_loader.py`** — frontmatter parsing, requirements gating, skill discovery
-7. **`test_tasks.py`** — add/list/update/archive (depends on memory fixture)
-8. **`test_scheduler.py`** — job CRUD + persistence; async `run_scheduler` can be deferred
-9. **`test_brain.py`** — agentic loop with fake provider: direct end_turn, tool_use loop, MAX_TOOL_ROUNDS cap
+7. **`test_scheduler.py`** — job CRUD + persistence; async `run_scheduler` can be deferred
+8. **`test_brain.py`** — agentic loop with fake provider: direct end_turn, tool_use loop, MAX_TOOL_ROUNDS cap
 
 ### File Layout
 
@@ -371,7 +350,6 @@ tests/
 ├── test_session.py          # conversation management
 ├── test_compression.py      # token estimation, truncation
 ├── test_skill_loader.py     # skill discovery
-├── test_tasks.py            # task parsing & archiving
 ├── test_scheduler.py        # cron job CRUD & trigger logic
 └── test_brain.py            # agentic loop (mock provider)
 ```
@@ -391,4 +369,3 @@ tests/
 3. ~~Scheduled tasks~~ — cron scheduler (`croniter` + asyncio), `create_cron` / `list_crons` / `delete_cron` tools
 4. ~~Web search tool~~ — `web_search` (Brave) + `web_fetch` (trafilatura)
 5. ~~Gmail~~ — `gmail_search`, `gmail_read`, `gmail_send` tools (IMAP/SMTP + App Password)
-6. ~~Autopilot~~ — autonomous task execution via heartbeat + TASKS.md + autopilot skill

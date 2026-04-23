@@ -20,7 +20,6 @@ from inkagent.config import (
     LONG_TERM_PATH,
     MEMORY_DIR,
     SOUL_PATH,
-    TASKS_PATH,
     USER_PATH,
 )
 
@@ -109,14 +108,6 @@ MEMORY_TEMPLATE = """\
 # MEMORY.md
 
 _Long-term memory. Important facts, preferences, and decisions are saved here — either explicitly via save_memory or automatically promoted from daily logs._
-"""
-
-TASKS_TEMPLATE = """\
-# TASKS.md
-
-_Autonomous task queue. Agent picks and executes tasks on each autopilot cycle._
-
-## Tasks
 """
 
 
@@ -236,13 +227,6 @@ def _ensure_memory_file() -> None:
         _write_file(LONG_TERM_PATH, MEMORY_TEMPLATE)
 
 
-def _ensure_tasks_file() -> None:
-    """Seed TASKS.md with the default template if it doesn't exist or is empty."""
-    content = _read_file(TASKS_PATH).strip()
-    if not content:
-        _write_file(TASKS_PATH, TASKS_TEMPLATE)
-
-
 def get_long_term_memory() -> str:
     """Return full MEMORY.md content for system prompt injection.
 
@@ -251,17 +235,6 @@ def get_long_term_memory() -> str:
     """
     _ensure_memory_file()
     return _read_file(LONG_TERM_PATH).strip()
-
-
-def read_tasks() -> str:
-    """Return raw TASKS.md content. Seeds with default template on first access."""
-    _ensure_tasks_file()
-    return _read_file(TASKS_PATH)
-
-
-def write_tasks(content: str) -> None:
-    """Overwrite TASKS.md with new content."""
-    _write_file(TASKS_PATH, content)
 
 
 def save_memory(content: str) -> str:

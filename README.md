@@ -44,7 +44,7 @@ Start simple, add capabilities as you need them. Each level builds on the previo
 | **Mobile access** | Chat via Telegram on your phone | + Telegram bot token | [Telegram](docs/guide-en.md#4-telegram-bot) |
 | **Web-connected** | Agent can search the internet | + Brave API key | [Web Search](docs/guide-en.md#5-web-search) |
 | **Email assistant** | Agent reads and sends Gmail | + Gmail App Password | [Gmail](docs/guide-en.md#6-gmail-integration) |
-| **Proactive assistant** | Scheduled tasks, background checks, auto-pilot | Telegram + heartbeat setup | [Scheduled Tasks](docs/guide-en.md#7-scheduled-tasks--heartbeat) |
+| **Proactive assistant** | Scheduled tasks, background checks | Telegram + heartbeat setup | [Scheduled Tasks](docs/guide-en.md#7-scheduled-tasks--heartbeat) |
 | **Better memory** | Semantic search over past conversations | + OpenAI API key (for embeddings) | [Memory Search](docs/guide-en.md#3-memory-system) |
 
 > **No API key?** Use `LLM_PROVIDER=openai-codex` to run on your ChatGPT Plus/Pro subscription. See the [Provider Guide](docs/guide-en.md#2-choosing-an-llm-provider).
@@ -118,7 +118,6 @@ For architecture details and development info, see [CLAUDE.md](CLAUDE.md).
 - [x] Instruction skills — Markdown-based workflow definitions, separated from tools
 - [x] Gmail tools (IMAP/SMTP + App Password)
 - [x] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
-- [x] Autopilot — autonomous task queue with auto-archiving
 - [ ] Publish to PyPI
 
 ## License

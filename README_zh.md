@@ -43,7 +43,7 @@
 | **移动访问** | 通过 Telegram 随时聊天 | + Telegram Bot Token | [Telegram 机器人](docs/guide-zh.md#4-telegram-机器人) |
 | **联网助手** | Agent 可以搜索互联网 | + Brave API Key | [Web 搜索](docs/guide-zh.md#5-web-搜索) |
 | **邮件助手** | Agent 可以读写 Gmail | + Gmail 应用专用密码 | [Gmail 集成](docs/guide-zh.md#6-gmail-集成) |
-| **主动助手** | 定时任务、后台检查、自动驾驶 | Telegram + 心跳配置 | [定时任务](docs/guide-zh.md#7-定时任务与心跳检查) |
+| **主动助手** | 定时任务、后台检查 | Telegram + 心跳配置 | [定时任务](docs/guide-zh.md#7-定时任务与心跳检查) |
 | **更强记忆** | 对历史对话进行语义搜索 | + OpenAI API Key（用于 embedding） | [记忆搜索](docs/guide-zh.md#3-记忆系统) |
 
 > **没有 API Key？** 设置 `LLM_PROVIDER=openai-codex` 即可使用你的 ChatGPT Plus/Pro 订阅运行。详见[模型配置指南](docs/guide-zh.md#2-选择-llm-提供商)。
@@ -117,7 +117,6 @@ inkagent 是一个 Agent 循环：你发送消息 → LLM 决定调用哪些工�
 - [x] 指令技能 — 基于 Markdown 的工作流定义，与工具分离
 - [x] Gmail 工具（IMAP/SMTP + App Password）
 - [x] 心跳 — 定期主动检查（读取 `HEARTBEAT.md` 清单，有事才通知）
-- [x] 自动驾驶 — 自主任务队列，支持自动归档
 - [ ] 发布到 PyPI
 
 ## 许可证

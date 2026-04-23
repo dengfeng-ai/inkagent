@@ -493,12 +493,11 @@ requires:
 
 ### 自带技能
 
-仓库在 `skills/` 下自带两个技能：
+仓库在 `skills/` 下自带一个技能：
 
 | 技能 | 说明 |
 |------|------|
 | `heartbeat` | 定期后台检查工作流（配合 cron 使用） |
-| `autopilot` | 自动执行 `memory/TASKS.md` 中的任务 |
 
 ---
 

@@ -26,8 +26,6 @@ _PATH_ATTRS = [
     ("inkagent.config", "USER_PATH"),
     ("inkagent.config", "LONG_TERM_PATH"),
     ("inkagent.config", "HEARTBEAT_PATH"),
-    ("inkagent.config", "TASKS_PATH"),
-    ("inkagent.config", "TASKS_ARCHIVE_DIR"),
     ("inkagent.config", "DB_PATH"),
     ("inkagent.config", "SKILLS_DIR"),
     # inkagent.memory (imports from config at module level)
@@ -37,11 +35,8 @@ _PATH_ATTRS = [
     ("inkagent.memory", "SOUL_PATH"),
     ("inkagent.memory", "USER_PATH"),
     ("inkagent.memory", "LONG_TERM_PATH"),
-    ("inkagent.memory", "TASKS_PATH"),
     # inkagent.scheduler
     ("inkagent.scheduler", "CRONS_PATH"),
-    # inkagent.tools.tasks
-    ("inkagent.tools.tasks", "TASKS_ARCHIVE_DIR"),
 ]
 
 
@@ -66,8 +61,6 @@ def tmp_memory_dir(tmp_path, monkeypatch):
         "USER_PATH": str(mem / "USER.md"),
         "LONG_TERM_PATH": str(mem / "MEMORY.md"),
         "HEARTBEAT_PATH": str(mem / "HEARTBEAT.md"),
-        "TASKS_PATH": str(mem / "TASKS.md"),
-        "TASKS_ARCHIVE_DIR": str(mem / "tasks_archive"),
         "DB_PATH": str(mem / "memory.db"),
         "SKILLS_DIR": str(tmp_path / "skills"),
     }
