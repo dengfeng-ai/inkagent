@@ -590,9 +590,7 @@ A summary of all environment variables. See `.env.example` in the project root f
 
 ### Observability (Optional)
 
-Pick one backend (or set `TRACING_PROVIDER` explicitly):
-
-**Langfuse** — `pip install -e ".[langfuse]"`
+Langfuse tracing — `pip install -e ".[langfuse]"`
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -600,12 +598,4 @@ Pick one backend (or set `TRACING_PROVIDER` explicitly):
 | `LANGFUSE_SECRET_KEY` | No | Langfuse secret key |
 | `LANGFUSE_HOST` | No | Langfuse host URL (default: `https://cloud.langfuse.com`) |
 
-**Comet Opik** — `pip install -e ".[opik]"`
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPIK_API_KEY` | No | [Comet Opik](https://www.comet.com/site/products/opik/) API key |
-| `OPIK_WORKSPACE` | No | Opik workspace name |
-| `OPIK_PROJECT_NAME` | No | Opik project name (default: `inkagent`) |
-
-The backend is auto-detected from env keys, or you can set `TRACING_PROVIDER=langfuse`, `opik`, or `none` explicitly.
+Tracing activates automatically when `LANGFUSE_PUBLIC_KEY` is set and the package is installed. Otherwise every tracing call is a no-op.

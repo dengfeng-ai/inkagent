@@ -1,89 +1,60 @@
-"""Tracing provider factory.
+"""Tracing — Langfuse if installed and configured, no-op otherwise.
 
-Selection via environment variables::
+Set ``LANGFUSE_PUBLIC_KEY`` (and friends) in env to enable. Without the
+key — or without the ``langfuse`` package installed — every call here
+becomes a no-op, and the rest of the codebase doesn't need to care.
 
-    TRACING_PROVIDER  — "langfuse", "opik", or "none" (default: auto-detect)
-
-Auto-detection checks for provider-specific env keys:
-
-* ``LANGFUSE_PUBLIC_KEY``  → langfuse
-* ``OPIK_API_KEY``         → opik
-* neither                  → noop
+Public API:
+    track(as_type=...)              decorator wrapping a function as a span
+    update_current_span(**kwargs)   enrich the current span
+    update_current_generation(**kwargs)
+    flush()                         flush pending traces
 """
 
 import logging
 import os
 from typing import Any, Callable
 
-from inkagent.tracing.base import TracingProvider
-
 logger = logging.getLogger(__name__)
 
-_instance: TracingProvider | None = None
+
+def _noop_track(*, as_type: str | None = None) -> Callable:
+    def decorator(fn: Callable) -> Callable:
+        return fn
+    return decorator
 
 
-def get_tracer() -> TracingProvider:
-    """Return the singleton tracing provider (lazy-initialized)."""
-    global _instance
-    if _instance is not None:
-        return _instance
-
-    name = os.environ.get("TRACING_PROVIDER", "").lower()
-    if not name:
-        # Auto-detect from provider-specific env keys.
-        if os.environ.get("LANGFUSE_PUBLIC_KEY"):
-            name = "langfuse"
-        elif os.environ.get("OPIK_API_KEY"):
-            name = "opik"
-        else:
-            name = "none"
-
-    if name == "langfuse":
-        try:
-            from inkagent.tracing.langfuse import LangfuseTracingProvider
-            _instance = LangfuseTracingProvider()
-            logger.info("Tracing backend: Langfuse")
-        except ImportError:
-            logger.warning("langfuse package not installed — tracing disabled")
-            _instance = _make_noop()
-    elif name == "opik":
-        try:
-            from inkagent.tracing.opik import OpikTracingProvider
-            _instance = OpikTracingProvider()
-            logger.info("Tracing backend: Opik")
-        except ImportError:
-            logger.warning("opik package not installed — tracing disabled")
-            _instance = _make_noop()
-    else:
-        _instance = _make_noop()
-
-    return _instance
+def _noop(**kwargs: Any) -> None:
+    pass
 
 
-def _make_noop() -> TracingProvider:
-    from inkagent.tracing.noop import NoopTracingProvider
-    return NoopTracingProvider()
+_enabled = False
+if os.environ.get("LANGFUSE_PUBLIC_KEY"):
+    try:
+        from langfuse import observe as _observe, get_client as _get_client
+        _enabled = True
+        logger.info("Tracing backend: Langfuse")
+    except ImportError:
+        logger.warning("langfuse package not installed — tracing disabled")
 
 
-# ---------------------------------------------------------------------------
-# Convenience functions — the public API used by consumer modules.
-# ---------------------------------------------------------------------------
+if _enabled:
+    def track(*, as_type: str | None = None) -> Callable:
+        kwargs: dict[str, Any] = {}
+        if as_type is not None:
+            kwargs["as_type"] = as_type
+        return _observe(**kwargs)
 
-def track(*, as_type: str | None = None) -> Callable:
-    """Decorator: trace a function as a span."""
-    return get_tracer().track(as_type=as_type)
+    def update_current_span(**kwargs: Any) -> None:
+        _get_client().update_current_span(**kwargs)
 
+    def update_current_generation(**kwargs: Any) -> None:
+        _get_client().update_current_generation(**kwargs)
 
-def update_current_span(**kwargs: Any) -> None:
-    """Enrich the current span with metadata."""
-    get_tracer().update_current_span(**kwargs)
-
-
-def update_current_generation(**kwargs: Any) -> None:
-    """Enrich the current generation span with metadata."""
-    get_tracer().update_current_generation(**kwargs)
-
-
-def flush() -> None:
-    """Flush pending traces to the backend."""
-    get_tracer().flush()
+    def flush() -> None:
+        _get_client().flush()
+else:
+    track = _noop_track
+    update_current_span = _noop
+    update_current_generation = _noop
+    flush = _noop

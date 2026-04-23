@@ -109,7 +109,7 @@ inkagent 是一个 Agent 循环：你发送消息 → LLM 决定调用哪些工�
 ## 路线图
 
 - [x] CLI + Shell 工具 + Markdown 记忆
-- [x] LLM 可观测性（Langfuse / Comet Opik）
+- [x] LLM 可观测性（Langfuse）
 - [x] Telegram 机器人
 - [x] 长期记忆 + 每日日志 + 自动晋升
 - [x] 文件操作工具（读、写、编辑、列目录）

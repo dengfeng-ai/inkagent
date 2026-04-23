@@ -110,7 +110,7 @@ For architecture details and development info, see [CLAUDE.md](CLAUDE.md).
 ## Roadmap
 
 - [x] CLI + shell tool + Markdown memory
-- [x] LLM observability (Langfuse / Comet Opik)
+- [x] LLM observability (Langfuse)
 - [x] Telegram bot interface
 - [x] Long-term memory + daily logs + auto-promotion
 - [x] File operation tools (read, write, edit, list)
