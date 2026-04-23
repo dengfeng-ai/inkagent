@@ -1,4 +1,4 @@
-"""Tests for Markdown skill loader — discovery, parsing, and override priority."""
+"""Tests for Markdown skill loader — discovery and parsing."""
 
 import os
 
@@ -104,35 +104,23 @@ class TestParseSkill:
 # ---------------------------------------------------------------------------
 
 class TestLoadSkills:
-    def test_discovers_builtin_skills(self):
-        _create_skill(skill_loader.BUILTIN_SKILLS_DIR, "alpha", VALID_SKILL)
+    def test_discovers_skills(self):
+        _create_skill(skill_loader.SKILLS_DIR, "alpha", VALID_SKILL)
         skills = load_skills()
         names = [s["name"] for s in skills]
         assert "test_skill" in names
 
-    def test_user_skill_overrides_builtin(self):
-        builtin = "---\nname: shared\ndescription: builtin version\n---\nbuiltin body"
-        user = "---\nname: shared\ndescription: user version\n---\nuser body"
-        _create_skill(skill_loader.BUILTIN_SKILLS_DIR, "shared", builtin)
-        _create_skill(skill_loader.USER_SKILLS_DIR, "shared", user)
-
-        skills = load_skills()
-        match = [s for s in skills if s["name"] == "shared"]
-        assert len(match) == 1
-        assert "user_skills" in match[0]["path"]
-        assert match[0]["description"] == "user version"
-
-    def test_empty_directories(self):
+    def test_empty_directory(self):
         skills = load_skills()
         assert skills == []
 
     def test_sorted_by_name(self):
         _create_skill(
-            skill_loader.BUILTIN_SKILLS_DIR, "zz",
+            skill_loader.SKILLS_DIR, "zz",
             "---\nname: zeta\ndescription: z\n---\nbody",
         )
         _create_skill(
-            skill_loader.BUILTIN_SKILLS_DIR, "aa",
+            skill_loader.SKILLS_DIR, "aa",
             "---\nname: alpha\ndescription: a\n---\nbody",
         )
         skills = load_skills()
@@ -141,12 +129,12 @@ class TestLoadSkills:
 
     def test_skips_non_directory_files(self):
         """Files directly in skills/ (not in subdirectories) are ignored."""
-        (skill_loader.BUILTIN_SKILLS_DIR / "stray_file.md").write_text("junk")
+        (skill_loader.SKILLS_DIR / "stray_file.md").write_text("junk")
         skills = load_skills()
         assert skills == []
 
     def test_skips_directory_without_skill_md(self):
-        (skill_loader.BUILTIN_SKILLS_DIR / "empty_dir").mkdir()
+        (skill_loader.SKILLS_DIR / "empty_dir").mkdir()
         skills = load_skills()
         assert skills == []
 
@@ -167,4 +155,4 @@ class TestBuildSkillPrompt:
         result = build_skill_prompt(skills)
         assert "- foo: does foo" in result
         assert "- bar: does bar" in result
-        assert "edit_skill" in result  # mentions the tool for modification
+        assert "/p/foo/SKILL.md" in result

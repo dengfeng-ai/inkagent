@@ -16,7 +16,7 @@ project root/
 │   ├── config.py            # Shared constants (token limits, timeouts, caps)
 │   ├── memory.py            # Markdown-based memory (read/write)
 │   ├── registry.py          # Tool registration system (Python tools)
-│   ├── skill_loader.py      # Markdown skill loader (built-in + user override)
+│   ├── skill_loader.py      # Markdown skill loader
 │   ├── prompts.py           # Prompt templates (system, promotion, summary)
 │   ├── session.py           # Conversation history management + JSON persistence
 │   ├── compression.py       # Context window estimation + small-model summarization
@@ -43,12 +43,8 @@ project root/
 │       ├── web_search.py    # web_search tool (Brave Search API)
 │       ├── web_fetch.py     # web_fetch tool (HTTP + trafilatura)
 │       ├── gmail.py         # gmail_search, gmail_read, gmail_send tools (Gmail API)
-│       ├── skill_edit.py    # edit_skill tool (copy-on-write to user_skills/)
 │       └── tasks.py         # add_task, list_tasks, update_task tools (autopilot task queue)
-├── skills/                  # Built-in instruction skills (git-tracked)
-│   └── skill_name/
-│       └── SKILL.md
-├── user_skills/             # User skill overrides (gitignored)
+├── skills/                  # Instruction skills (git-tracked, user-edited)
 │   └── skill_name/
 │       └── SKILL.md
 ├── memory/                  # All memory (gitignored)
@@ -173,7 +169,7 @@ Components:
 - **`skills/autopilot/SKILL.md`** — Instruction skill teaching the agent the autopilot workflow (read tasks, pick highest priority, execute, update status, log results)
 - **`inkagent/tools/tasks.py`** — `add_task`, `list_tasks`, `update_task` tools for managing the task queue
 
-The heartbeat skill checks for pending autopilot tasks before running its regular checklist. When a task is found, the agent reads the autopilot skill instructions, works on the task (using the `github-pr` skill for repo tasks), updates the task status, and logs results to the daily log. No separate cron job is needed.
+The heartbeat skill checks for pending autopilot tasks before running its regular checklist. When a task is found, the agent reads the autopilot skill instructions, works on the task, updates the task status, and logs results to the daily log. No separate cron job is needed.
 
 ## Session Control Commands
 
@@ -209,7 +205,7 @@ Built-in tools:
 - `log_daily` — appends a note to today's daily log (`memory/daily/YYYY-MM-DD.md`); important entries are auto-promoted to MEMORY.md overnight
 - `save_memory` — saves important information directly to long-term memory (`MEMORY.md`); use for explicit "remember this" requests
 - `read_file` — reads a file's text content (truncated at `TOOL_OUTPUT_CAP` chars)
-- `write_file` — writes content to a file, creating parent directories as needed. Within the project, writes are restricted to `memory/`, `conversations/`, `user_skills/`; files outside the project are unrestricted
+- `write_file` — writes content to a file, creating parent directories as needed. Within the project, writes are restricted to `memory/` and `conversations/`; files outside the project are unrestricted
 - `edit_file` — replaces an exact unique string match in a file (search-and-replace). Same write restrictions as `write_file`
 - `list_directory` — lists files and subdirectories at a given path
 - `create_cron` — creates a scheduled task with a cron expression + prompt; binds to the current session. Supports `silent_ok` flag for heartbeat-style jobs (suppresses notification when agent replies `HEARTBEAT_OK`)
@@ -221,7 +217,6 @@ Built-in tools:
 - `gmail_read` — reads full email content by UID (includes attachments list, Message-ID for replies)
 - `gmail_send` — sends or replies to email via SMTP (supports In-Reply-To threading)
 - `gmail_mark_read` — marks one or more emails as read by UID (batch support)
-- `edit_skill` — creates or edits an instruction skill with copy-on-write to `user_skills/`. Supports `mode='write'` (full content) and `mode='edit'` (search-and-replace). For built-in skills, automatically copies to `user_skills/` before editing
 - `add_task` — adds a task to the autopilot queue (`memory/TASKS.md`) with description, priority, repo (owner/repo), and context. Auto-adds `created: YYYY-MM-DD`
 - `list_tasks` — lists tasks from the autopilot queue, optionally filtered by status (pending, in_progress, completed, blocked). Triggers auto-archiving of old completed tasks
 - `update_task` — updates a task's status (pending, in_progress, completed, blocked) with an optional note. Auto-adds `completed: YYYY-MM-DD` for completed tasks, `updated: YYYY-MM-DD` for other status changes
@@ -230,11 +225,7 @@ Built-in tools:
 
 Instruction skills are pure Markdown files that teach the LLM workflows without writing Python code. They guide the LLM on *when and how* to combine existing tools for specific tasks.
 
-Two directories are scanned:
-- **`skills/`** — built-in skills, git-tracked, updated on `git pull`
-- **`user_skills/`** — user overrides, gitignored, never touched by upgrades
-
-When both contain a skill with the same `name`, the user version wins. This lets users customize built-in skills without merge conflicts on upgrade.
+`skill_loader.py` scans `skills/` for subdirectories containing a `SKILL.md` file. The agent does not modify skills — edit them directly in your editor.
 
 File format — YAML frontmatter + Markdown body:
 ```yaml
@@ -249,11 +240,7 @@ requires:            # optional eligibility gating
 Instructions for the LLM describing the workflow…
 ```
 
-To add a new instruction skill: create a directory in `skills/` (built-in) or `user_skills/` (personal) with a `SKILL.md` file. No Python, no imports. The skill loader discovers it automatically.
-
-To customize a built-in skill manually: copy its directory to `user_skills/` (e.g. `cp -r skills/heartbeat user_skills/heartbeat`), then edit the copy.
-
-The LLM modifies skills via the `edit_skill` tool (not `edit_file`), which handles copy-on-write to `user_skills/` automatically — built-in `skills/` files are never modified by the agent.
+To add a new skill, create a directory under `skills/` with a `SKILL.md` file. No Python, no imports. The skill loader discovers it automatically.
 
 - Only skill meta (name, description, path) is injected into the system prompt — the LLM uses `read_file` to load full instructions on demand
 - Skills with unmet `requires` are silently skipped
@@ -292,7 +279,7 @@ The `openai-codex` provider allows running inkagent using a **ChatGPT Plus/Pro s
 ## File Safety
 
 The agent's `write_file` and `edit_file` tools enforce a path allowlist for writes within the project directory:
-- **Writable**: `memory/`, `conversations/`, `user_skills/`
+- **Writable**: `memory/`, `conversations/`
 - **Read-only**: all other project files (`inkagent/`, `skills/`, etc.)
 - **Outside the project**: no restrictions — the agent can freely read and write external files
 - **Always blocked**: `.db` / `.sqlite` files (managed databases)
@@ -323,7 +310,7 @@ Modules with clear input/output and no external dependencies. Use `tmp_path` to 
 | `session.py` | Conversation history CRUD, JSON persistence, reset |
 | `compression.py` | Token estimation, message truncation logic |
 | `telegram_format.py` | Markdown → Telegram HTML conversion |
-| `skill_loader.py` | YAML frontmatter parsing, skill discovery, user_skills override priority |
+| `skill_loader.py` | YAML frontmatter parsing, skill discovery |
 | `registry.py` | Tool registration, schema validation, duplicate handling |
 | `tools/files.py` | Path guard `_check_writable` (already tested) |
 | `tools/tasks.py` | Task parsing, status update, auto-archiving |
@@ -344,7 +331,7 @@ Mark with `@pytest.mark.slow`, skip by default. Verify "send message → get rep
 ### Conventions
 
 - **Test behavior, not implementation** — assert on outputs and side effects, not internal calls
-- **Isolate the filesystem with `tmp_path`** — monkeypatch path constants to point at `tmp_path`. Paths need to be patched in **both** `inkagent.config` and in modules that import them at module level (e.g. `inkagent.memory.MEMORY_DIR`, `inkagent.session.CONVERSATIONS_DIR`, `inkagent.skill_loader.BUILTIN_SKILLS_DIR`)
+- **Isolate the filesystem with `tmp_path`** — monkeypatch path constants to point at `tmp_path`. Paths need to be patched in **both** `inkagent.config` and in modules that import them at module level (e.g. `inkagent.memory.MEMORY_DIR`, `inkagent.session.CONVERSATIONS_DIR`, `inkagent.skill_loader.SKILLS_DIR`)
 - **Clean up module-level global state between tests** — several modules use global dicts/lists: `registry._skills`, `session._sessions` + `session._session_files`, `scheduler._jobs`. Use fixtures that save/restore or clear these between tests
 - **Mock at the outermost boundary** — mock LLM HTTP calls and external APIs, not internal functions
 - **Tracing** — `inkagent/tracing/` resolves to no-op functions when `LANGFUSE_PUBLIC_KEY` is unset. No fixture needed — just don't set tracing env vars in tests
@@ -366,7 +353,7 @@ Each step is independently runnable and committable:
 3. **`test_memory.py`** — template seeding, read/write, daily log, promotion marker, keyword search
 4. **`test_session.py`** — conversation CRUD, JSON persistence, reset, inject
 5. **`test_compression.py`** — `estimate_tokens` pure logic; `maybe_compress`/`force_compress` with mocked `_summarize_messages`
-6. **`test_skill_loader.py`** — frontmatter parsing, requirements gating, user override priority
+6. **`test_skill_loader.py`** — frontmatter parsing, requirements gating, skill discovery
 7. **`test_tasks.py`** — add/list/update/archive (depends on memory fixture)
 8. **`test_scheduler.py`** — job CRUD + persistence; async `run_scheduler` can be deferred
 9. **`test_brain.py`** — agentic loop with fake provider: direct end_turn, tool_use loop, MAX_TOOL_ROUNDS cap
@@ -383,7 +370,7 @@ tests/
 ├── test_memory.py           # memory read/write/promotion
 ├── test_session.py          # conversation management
 ├── test_compression.py      # token estimation, truncation
-├── test_skill_loader.py     # skill discovery & priority
+├── test_skill_loader.py     # skill discovery
 ├── test_tasks.py            # task parsing & archiving
 ├── test_scheduler.py        # cron job CRUD & trigger logic
 └── test_brain.py            # agentic loop (mock provider)

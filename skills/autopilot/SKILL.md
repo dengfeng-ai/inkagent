@@ -37,7 +37,6 @@ Read the task's context. If a `repo` is specified:
 - Clone or navigate to the repo
 - Use `list_directory` and `read_file` to understand the codebase
 - Check for existing tests, README, or documentation
-- Use the `github-pr` skill to create PRs for code changes
 
 If resuming an in-progress task (`[~]`), read the `progress` note to understand what's already done.
 

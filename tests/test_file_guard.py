@@ -6,7 +6,7 @@ from inkagent.tools.files import _check_writable
 
 
 class TestCheckWritable:
-    """Within project: only memory/, conversations/, user_skills/ are writable.
+    """Within project: only memory/ and conversations/ are writable.
     Outside project: no restrictions.
     """
 
@@ -16,7 +16,6 @@ class TestCheckWritable:
         "memory/MEMORY.md",
         "memory/daily/2026-03-31.md",
         "conversations/session_123.json",
-        "user_skills/heartbeat/SKILL.md",
     ])
     def test_allowed_project_paths(self, path):
         assert _check_writable(path) is None

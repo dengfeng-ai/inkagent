@@ -65,22 +65,20 @@ docker build -t inkagent .
 docker run -it --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
-  -v $(pwd)/user_skills:/app/user_skills \
   inkagent
 
 # Telegram bot mode
 docker run --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
-  -v $(pwd)/user_skills:/app/user_skills \
   inkagent python -m inkagent.bot
 ```
 
-Mount `memory/`, `conversations/`, and `user_skills/` to persist data across container restarts. With `user_skills/` mounted, you can add or customize skills on the host and they take effect immediately inside the container.
+Mount `memory/` and `conversations/` to persist data across container restarts.
 
 ### File Safety
 
-Within the project directory, the agent can only write to `memory/`, `conversations/`, and `user_skills/`. All other project files (source code, configs, etc.) are read-only to the agent. Files outside the project directory are unrestricted.
+Within the project directory, the agent can only write to `memory/` and `conversations/`. All other project files (source code, configs, skills, etc.) are read-only to the agent. Files outside the project directory are unrestricted.
 
 This is enforced at the tool level for `write_file` and `edit_file`. The `run_shell` tool is not hard-restricted but the agent is instructed via its system prompt not to use it to bypass file write restrictions.
 
@@ -446,19 +444,14 @@ Confirm the heartbeat task has been created.
 
 Teach the agent new workflows through Markdown files — no code required. Skills guide the agent on how to combine existing tools to accomplish specific tasks.
 
-inkagent uses two skill directories:
-
-- **`skills/`** — built-in skills, git-tracked, updated when you `git pull`
-- **`user_skills/`** — your custom or overridden skills, gitignored, never touched by upgrades
-
-When both directories contain a skill with the same `name`, the user version wins.
+All skills live in `skills/`. Edit them directly in your editor — the agent does not modify skills.
 
 ### Creating a New Skill
 
-Create a directory and `SKILL.md` file under `user_skills/`:
+Create a directory and `SKILL.md` file under `skills/`:
 
 ```
-user_skills/
+skills/
 └── daily_report/
     └── SKILL.md
 ```
@@ -480,22 +473,9 @@ When the user asks for a daily report:
 
 Once placed, the agent discovers the skill automatically on next startup. The agent sees the skill name and description in its system prompt, and loads the full instructions via `read_file` when needed.
 
-### Customizing a Built-in Skill
+### Customizing an Existing Skill
 
-**Via conversation** (recommended): just tell the agent what to change. The agent uses the `edit_skill` tool, which automatically copies the built-in skill to `user_skills/` before editing (copy-on-write). The original in `skills/` is never modified.
-
-```
-you> Change the heartbeat quiet hours to 22:00-07:00
-```
-
-**Manually**: copy the skill directory and edit the copy:
-
-```bash
-cp -r skills/heartbeat user_skills/heartbeat
-# Edit user_skills/heartbeat/SKILL.md to your liking
-```
-
-The user version overrides the built-in one by matching on `name`.
+Open the relevant `skills/<name>/SKILL.md` in your editor and edit it. Changes take effect on the next agent startup.
 
 ### Conditional Loading
 
@@ -511,12 +491,14 @@ requires:
 ---
 ```
 
-### Built-in Skills
+### Bundled Skills
+
+The repo ships with two skills under `skills/`:
 
 | Skill | Description |
 |-------|-------------|
-| `daily_report` | Generate a structured daily summary |
 | `heartbeat` | Periodic background check workflow (used with cron) |
+| `autopilot` | Autonomously execute tasks from `memory/TASKS.md` |
 
 ---
 

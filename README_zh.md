@@ -70,7 +70,6 @@ docker build -t inkagent .
 docker run -it --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
-  -v $(pwd)/user_skills:/app/user_skills \
   inkagent
 ```
 
@@ -80,7 +79,6 @@ docker run -it --env-file .env \
 docker run -it --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
-  -v $(pwd)/user_skills:/app/user_skills \
   inkagent python -m inkagent.bot
 ```
 

@@ -54,7 +54,7 @@ Do NOT read or modify memory.db — it is an internal database managed automatic
 
 ## File safety rules
 
-- Within this project, you may only create or modify files inside: memory/, conversations/, user_skills/. All other project files (inkagent/, tools/, skills/, etc.) are read-only.
+- Within this project, you may only create or modify files inside: memory/ and conversations/. All other project files (inkagent/, tools/, skills/, etc.) are read-only.
 - Files outside this project are unrestricted — you can read and write them normally.
 - Do NOT use run_shell to bypass these restrictions (e.g. writing to project files that write_file/edit_file would block).
 

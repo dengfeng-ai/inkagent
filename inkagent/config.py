@@ -28,12 +28,11 @@ TASKS_PATH = os.path.join(MEMORY_DIR, "TASKS.md")
 TASKS_ARCHIVE_DIR = os.path.join(MEMORY_DIR, "tasks_archive")
 DB_PATH = os.path.join(MEMORY_DIR, "memory.db")
 
-# Skills directories
-BUILTIN_SKILLS_DIR = os.path.join(_PROJECT_ROOT, "skills")
-USER_SKILLS_DIR = os.path.join(_PROJECT_ROOT, "user_skills")
+# Skills directory (markdown instruction skills, edited by the user directly)
+SKILLS_DIR = os.path.join(_PROJECT_ROOT, "skills")
 
 # Writable directories (relative names, checked against project root)
-WRITABLE_DIRS = ("memory", "conversations", "user_skills")
+WRITABLE_DIRS = ("memory", "conversations")
 
 # ---------------------------------------------------------------------------
 # LLM generation

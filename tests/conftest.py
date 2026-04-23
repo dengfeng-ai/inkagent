@@ -29,8 +29,7 @@ _PATH_ATTRS = [
     ("inkagent.config", "TASKS_PATH"),
     ("inkagent.config", "TASKS_ARCHIVE_DIR"),
     ("inkagent.config", "DB_PATH"),
-    ("inkagent.config", "BUILTIN_SKILLS_DIR"),
-    ("inkagent.config", "USER_SKILLS_DIR"),
+    ("inkagent.config", "SKILLS_DIR"),
     # inkagent.memory (imports from config at module level)
     ("inkagent.memory", "MEMORY_DIR"),
     ("inkagent.memory", "DAILY_DIR"),
@@ -55,7 +54,6 @@ def tmp_memory_dir(tmp_path, monkeypatch):
     (mem / "daily").mkdir()
     (tmp_path / "conversations").mkdir()
     (tmp_path / "skills").mkdir()
-    (tmp_path / "user_skills").mkdir()
 
     path_map = {
         "DATA_DIR": str(tmp_path),
@@ -71,8 +69,7 @@ def tmp_memory_dir(tmp_path, monkeypatch):
         "TASKS_PATH": str(mem / "TASKS.md"),
         "TASKS_ARCHIVE_DIR": str(mem / "tasks_archive"),
         "DB_PATH": str(mem / "memory.db"),
-        "BUILTIN_SKILLS_DIR": str(tmp_path / "skills"),
-        "USER_SKILLS_DIR": str(tmp_path / "user_skills"),
+        "SKILLS_DIR": str(tmp_path / "skills"),
     }
 
     for module, attr in _PATH_ATTRS:
@@ -86,14 +83,10 @@ def tmp_memory_dir(tmp_path, monkeypatch):
         Path(path_map["CONVERSATIONS_DIR"]),
     )
 
-    # skill_loader.py stores dirs as Path objects
+    # skill_loader.py stores dir as a Path object
     monkeypatch.setattr(
-        "inkagent.skill_loader.BUILTIN_SKILLS_DIR",
-        Path(path_map["BUILTIN_SKILLS_DIR"]),
-    )
-    monkeypatch.setattr(
-        "inkagent.skill_loader.USER_SKILLS_DIR",
-        Path(path_map["USER_SKILLS_DIR"]),
+        "inkagent.skill_loader.SKILLS_DIR",
+        Path(path_map["SKILLS_DIR"]),
     )
 
     return tmp_path

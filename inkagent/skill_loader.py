@@ -1,8 +1,7 @@
 """Markdown skill loader.
 
-Scans skills/ (built-in, git-tracked) and user_skills/ (user overrides,
-gitignored) for SKILL.md files.  When both directories contain a skill
-with the same name, the user version wins.
+Scans ``skills/`` for SKILL.md files. Skills are user-maintained
+markdown files — edit them directly in your editor.
 
 Skill file format (YAML frontmatter + Markdown body)::
 
@@ -25,15 +24,11 @@ from typing import Any
 
 import yaml
 
-from inkagent.config import (
-    BUILTIN_SKILLS_DIR as _BUILTIN_SKILLS_DIR_STR,
-    USER_SKILLS_DIR as _USER_SKILLS_DIR_STR,
-)
+from inkagent.config import SKILLS_DIR as _SKILLS_DIR_STR
 
 logger = logging.getLogger(__name__)
 
-BUILTIN_SKILLS_DIR = Path(_BUILTIN_SKILLS_DIR_STR)
-USER_SKILLS_DIR = Path(_USER_SKILLS_DIR_STR)
+SKILLS_DIR = Path(_SKILLS_DIR_STR)
 
 
 def _check_requirements(requires: dict[str, Any]) -> bool:
@@ -55,7 +50,6 @@ def _parse_skill(path: Path) -> dict[str, Any] | None:
         logger.warning("Cannot read %s: %s", path, e)
         return None
 
-    # Split YAML frontmatter from body.
     if not text.startswith("---"):
         logger.warning("No frontmatter in %s, skipping", path)
         return None
@@ -89,39 +83,23 @@ def _parse_skill(path: Path) -> dict[str, Any] | None:
     }
 
 
-def _scan_dir(directory: Path) -> dict[str, dict[str, Any]]:
-    """Scan a single skills directory, returning {name: skill_dict}."""
-    if not directory.is_dir():
-        return {}
+def load_skills() -> list[dict[str, Any]]:
+    """Discover and parse all eligible skills under ``skills/``."""
+    if not SKILLS_DIR.is_dir():
+        return []
 
-    found: dict[str, dict[str, Any]] = {}
-    for child in sorted(directory.iterdir()):
+    skills: list[dict[str, Any]] = []
+    for child in sorted(SKILLS_DIR.iterdir()):
         if not child.is_dir():
             continue
         skill_file = child / "SKILL.md"
         if not skill_file.is_file():
             continue
-        skill = _parse_skill(skill_file)
-        if skill is not None:
-            found[skill["name"]] = skill
-    return found
+        parsed = _parse_skill(skill_file)
+        if parsed is not None:
+            skills.append(parsed)
 
-
-def load_skills() -> list[dict[str, Any]]:
-    """Discover and parse all eligible skills.
-
-    Scans built-in ``skills/`` first, then ``user_skills/``.
-    User skills override built-in ones with the same name.
-    """
-    skills_by_name = _scan_dir(BUILTIN_SKILLS_DIR)
-    user_skills = _scan_dir(USER_SKILLS_DIR)
-
-    for name, skill in user_skills.items():
-        if name in skills_by_name:
-            logger.info("User skill '%s' overrides built-in", name)
-        skills_by_name[name] = skill
-
-    skills = sorted(skills_by_name.values(), key=lambda s: s["name"])
+    skills.sort(key=lambda s: s["name"])
     logger.info("Loaded %d instruction skill(s)", len(skills))
     return skills
 
@@ -129,20 +107,13 @@ def load_skills() -> list[dict[str, Any]]:
 def build_skill_prompt(skills: list[dict[str, Any]]) -> str:
     """Build the skill section for the system prompt.
 
-    Only includes skill name, description, and file path.
-    The LLM uses read_file to load the full instructions when needed,
-    and edit_skill to modify them (copy-on-write to user_skills/).
+    Only emits skill name, description, and file path. The LLM uses
+    ``read_file`` to load the full instructions on demand.
     """
     if not skills:
         return ""
 
-    lines: list[str] = []
-    for s in skills:
-        lines.append(f"- {s['name']}: {s['description']} → `{s['path']}`")
-    lines.append("")
-    lines.append(
-        "To modify a skill, use the edit_skill tool (not edit_file). "
-        "It handles copy-on-write to user_skills/ automatically."
+    return "\n".join(
+        f"- {s['name']}: {s['description']} → `{s['path']}`"
+        for s in skills
     )
-
-    return "\n".join(lines)

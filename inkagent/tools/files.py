@@ -21,7 +21,7 @@ def _check_writable(path: str) -> str | None:
 
     Rules:
     - .db/.sqlite files are always blocked.
-    - Inside the project: only memory/, conversations/, user_skills/ are writable.
+    - Inside the project: only memory/ and conversations/ are writable.
     - Outside the project: no restrictions.
     """
     resolved = Path(path).resolve()

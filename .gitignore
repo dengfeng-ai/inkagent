@@ -1,6 +1,5 @@
 memory/
 conversations/
-user_skills/
 __pycache__/
 *.pyc
 .env
