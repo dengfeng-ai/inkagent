@@ -19,13 +19,46 @@ else:
     import email.utils
     import imaplib
     import smtplib
+    import time
     from email.mime.text import MIMEText
+    from typing import Callable, TypeVar
 
     from inkagent.registry import register
 
     IMAP_HOST = "imap.gmail.com"
     SMTP_HOST = "smtp.gmail.com"
     SMTP_PORT = 587
+
+    _T = TypeVar("_T")
+
+    def _imap_with_retry(
+        folder: str,
+        readonly: bool,
+        op: "Callable[[imaplib.IMAP4_SSL], _T]",
+        attempts: int = 3,
+        base_delay: float = 0.3,
+    ) -> "_T":
+        """Run an IMAP operation with retries on transient server failures.
+
+        Reconnects (fresh login + select) on each attempt. Auth failures are
+        permanent and raised immediately; other IMAP/socket errors back off
+        exponentially before the next try.
+        """
+        last_exc: Exception | None = None
+        for i in range(attempts):
+            try:
+                with imaplib.IMAP4_SSL(IMAP_HOST) as imap:
+                    imap.login(_GMAIL_ADDRESS, _GMAIL_APP_PASSWORD)
+                    imap.select(folder, readonly=readonly)
+                    return op(imap)
+            except (imaplib.IMAP4.error, OSError) as e:
+                last_exc = e
+                if "authenticationfailed" in str(e).lower():
+                    raise
+                if i < attempts - 1:
+                    time.sleep(base_delay * (2**i))
+        assert last_exc is not None
+        raise last_exc
 
     def _decode_header(raw: str) -> str:
         """Decode RFC 2047 encoded header value."""
@@ -111,46 +144,44 @@ else:
     def gmail_search(query: str, max_results: int = 10, folder: str = "INBOX") -> str:
         max_results = min(max_results, 20)
 
+        def _op(imap: imaplib.IMAP4_SSL) -> str:
+            status, data = imap.search(None, query)
+            if status != "OK" or not data[0]:
+                return "No emails found."
+
+            msg_ids = data[0].split()
+            msg_ids = list(reversed(msg_ids[-max_results:]))
+
+            lines: list[str] = []
+            for uid in msg_ids:
+                status, msg_data = imap.fetch(uid, "(FLAGS BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)])")
+                if status != "OK" or not msg_data[0]:
+                    continue
+
+                raw_header = msg_data[0][1]
+                header_msg = _email.message_from_bytes(raw_header)
+
+                from_val = _decode_header(header_msg.get("From", "?"))
+                subject_val = _decode_header(header_msg.get("Subject", "(no subject)"))
+                date_val = header_msg.get("Date", "?")
+
+                flags_raw = msg_data[0][0].decode() if msg_data[0][0] else ""
+                unread = "\\Seen" not in flags_raw
+
+                lines.append(
+                    f"{'[UNREAD] ' if unread else ''}"
+                    f"UID: {uid.decode()}\n"
+                    f"  From: {from_val}\n"
+                    f"  Subject: {subject_val}\n"
+                    f"  Date: {date_val}"
+                )
+
+            if not lines:
+                return "No emails found."
+            return "\n\n".join(lines)
+
         try:
-            with imaplib.IMAP4_SSL(IMAP_HOST) as imap:
-                imap.login(_GMAIL_ADDRESS, _GMAIL_APP_PASSWORD)
-                imap.select(folder, readonly=True)
-
-                status, data = imap.search(None, query)
-                if status != "OK" or not data[0]:
-                    return "No emails found."
-
-                msg_ids = data[0].split()
-                msg_ids = list(reversed(msg_ids[-max_results:]))
-
-                lines: list[str] = []
-                for uid in msg_ids:
-                    status, msg_data = imap.fetch(uid, "(FLAGS BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)])")
-                    if status != "OK" or not msg_data[0]:
-                        continue
-
-                    raw_header = msg_data[0][1]
-                    header_msg = _email.message_from_bytes(raw_header)
-
-                    from_val = _decode_header(header_msg.get("From", "?"))
-                    subject_val = _decode_header(header_msg.get("Subject", "(no subject)"))
-                    date_val = header_msg.get("Date", "?")
-
-                    flags_raw = msg_data[0][0].decode() if msg_data[0][0] else ""
-                    unread = "\\Seen" not in flags_raw
-
-                    lines.append(
-                        f"{'[UNREAD] ' if unread else ''}"
-                        f"UID: {uid.decode()}\n"
-                        f"  From: {from_val}\n"
-                        f"  Subject: {subject_val}\n"
-                        f"  Date: {date_val}"
-                    )
-
-                if not lines:
-                    return "No emails found."
-                return "\n\n".join(lines)
-
+            return _imap_with_retry(folder, readonly=True, op=_op)
         except imaplib.IMAP4.error as e:
             return f"Error: Gmail IMAP failed — {e}"
         except Exception as e:
@@ -182,45 +213,43 @@ else:
         },
     )
     def gmail_read(uid: str, folder: str = "INBOX") -> str:
+        def _op(imap: imaplib.IMAP4_SSL) -> str:
+            status, msg_data = imap.fetch(uid.encode(), "(RFC822)")
+            if status != "OK" or not msg_data[0]:
+                return f"Error: Email UID {uid} not found."
+
+            msg = _email.message_from_bytes(msg_data[0][1])
+
+            from_val = _decode_header(msg.get("From", "?"))
+            to_val = _decode_header(msg.get("To", "?"))
+            cc_val = _decode_header(msg.get("Cc", ""))
+            subject_val = _decode_header(msg.get("Subject", "(no subject)"))
+            date_val = msg.get("Date", "?")
+            message_id = msg.get("Message-ID", "")
+
+            body = _extract_text(msg)
+            attachments = _list_attachments(msg)
+
+            result = (
+                f"From: {from_val}\n"
+                f"To: {to_val}\n"
+            )
+            if cc_val:
+                result += f"Cc: {cc_val}\n"
+            result += (
+                f"Subject: {subject_val}\n"
+                f"Date: {date_val}\n"
+                f"Message-ID: {message_id}\n"
+            )
+
+            if attachments:
+                result += "Attachments:\n" + "\n".join(f"  - {a}" for a in attachments) + "\n"
+
+            result += f"\n{body}"
+            return result
+
         try:
-            with imaplib.IMAP4_SSL(IMAP_HOST) as imap:
-                imap.login(_GMAIL_ADDRESS, _GMAIL_APP_PASSWORD)
-                imap.select(folder, readonly=True)
-
-                status, msg_data = imap.fetch(uid.encode(), "(RFC822)")
-                if status != "OK" or not msg_data[0]:
-                    return f"Error: Email UID {uid} not found."
-
-                msg = _email.message_from_bytes(msg_data[0][1])
-
-                from_val = _decode_header(msg.get("From", "?"))
-                to_val = _decode_header(msg.get("To", "?"))
-                cc_val = _decode_header(msg.get("Cc", ""))
-                subject_val = _decode_header(msg.get("Subject", "(no subject)"))
-                date_val = msg.get("Date", "?")
-                message_id = msg.get("Message-ID", "")
-
-                body = _extract_text(msg)
-                attachments = _list_attachments(msg)
-
-                result = (
-                    f"From: {from_val}\n"
-                    f"To: {to_val}\n"
-                )
-                if cc_val:
-                    result += f"Cc: {cc_val}\n"
-                result += (
-                    f"Subject: {subject_val}\n"
-                    f"Date: {date_val}\n"
-                    f"Message-ID: {message_id}\n"
-                )
-
-                if attachments:
-                    result += "Attachments:\n" + "\n".join(f"  - {a}" for a in attachments) + "\n"
-
-                result += f"\n{body}"
-                return result
-
+            return _imap_with_retry(folder, readonly=True, op=_op)
         except imaplib.IMAP4.error as e:
             return f"Error: Gmail IMAP failed — {e}"
         except Exception as e:
@@ -335,14 +364,12 @@ else:
         },
     )
     def gmail_mark_read(uids: list[str], folder: str = "INBOX") -> str:
+        def _op(imap: imaplib.IMAP4_SSL) -> None:
+            for uid in uids:
+                imap.store(uid.encode(), "+FLAGS", "\\Seen")
+
         try:
-            with imaplib.IMAP4_SSL(IMAP_HOST) as imap:
-                imap.login(_GMAIL_ADDRESS, _GMAIL_APP_PASSWORD)
-                imap.select(folder)
-
-                for uid in uids:
-                    imap.store(uid.encode(), "+FLAGS", "\\Seen")
-
+            _imap_with_retry(folder, readonly=False, op=_op)
         except imaplib.IMAP4.error as e:
             return f"Error: Gmail IMAP failed — {e}"
         except Exception as e:
