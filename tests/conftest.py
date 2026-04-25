@@ -19,8 +19,10 @@ _PATH_ATTRS = [
     ("inkagent.config", "DATA_DIR"),
     ("inkagent.config", "MEMORY_DIR"),
     ("inkagent.config", "DAILY_DIR"),
+    ("inkagent.config", "CONFIG_DIR"),
     ("inkagent.config", "CONVERSATIONS_DIR"),
     ("inkagent.config", "CRONS_PATH"),
+    ("inkagent.config", "AGENTS_PATH"),
     ("inkagent.config", "IDENTITY_PATH"),
     ("inkagent.config", "SOUL_PATH"),
     ("inkagent.config", "USER_PATH"),
@@ -31,10 +33,12 @@ _PATH_ATTRS = [
     # inkagent.memory (imports from config at module level)
     ("inkagent.memory", "MEMORY_DIR"),
     ("inkagent.memory", "DAILY_DIR"),
+    ("inkagent.memory", "AGENTS_PATH"),
     ("inkagent.memory", "IDENTITY_PATH"),
     ("inkagent.memory", "SOUL_PATH"),
     ("inkagent.memory", "USER_PATH"),
     ("inkagent.memory", "LONG_TERM_PATH"),
+    ("inkagent.memory", "HEARTBEAT_PATH"),
     # inkagent.scheduler
     ("inkagent.scheduler", "CRONS_PATH"),
 ]
@@ -47,6 +51,8 @@ def tmp_memory_dir(tmp_path, monkeypatch):
     mem = tmp_path / "memory"
     mem.mkdir()
     (mem / "daily").mkdir()
+    cfg = tmp_path / "config"
+    cfg.mkdir()
     (tmp_path / "conversations").mkdir()
     (tmp_path / "skills").mkdir()
 
@@ -54,8 +60,10 @@ def tmp_memory_dir(tmp_path, monkeypatch):
         "DATA_DIR": str(tmp_path),
         "MEMORY_DIR": str(mem),
         "DAILY_DIR": str(mem / "daily"),
+        "CONFIG_DIR": str(cfg),
         "CONVERSATIONS_DIR": str(tmp_path / "conversations"),
         "CRONS_PATH": str(mem / "crons.json"),
+        "AGENTS_PATH": str(cfg / "AGENTS.md"),
         "IDENTITY_PATH": str(mem / "IDENTITY.md"),
         "SOUL_PATH": str(mem / "SOUL.md"),
         "USER_PATH": str(mem / "USER.md"),

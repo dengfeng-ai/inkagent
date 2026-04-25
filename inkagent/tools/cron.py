@@ -1,9 +1,7 @@
 """Cron skills — create, list, and delete scheduled tasks."""
 
-import os
-
-from inkagent.config import HEARTBEAT_PATH as _HEARTBEAT_PATH
 import inkagent.session as _session
+from inkagent.memory import get_heartbeat, heartbeat_needs_setup
 from inkagent.registry import register
 from inkagent.scheduler import DEFAULT_TIMEZONE, add_job, remove_job, list_jobs
 
@@ -57,12 +55,15 @@ def create_cron(id: str, cron: str, prompt: str, timezone: str = DEFAULT_TIMEZON
             f"Prompt: {job['prompt']}\n"
             f"Session: {job['session_id']}"
         )
-        if silent_ok and not os.path.exists(_HEARTBEAT_PATH):
-            result += (
-                "\n\nHeartbeat checklist (memory/HEARTBEAT.md) not found. "
-                "Ask the user what they want to check periodically, "
-                "then create the file. Keep the reply short."
-            )
+        if silent_ok:
+            get_heartbeat()  # seed memory/HEARTBEAT.md with default template if missing
+            if heartbeat_needs_setup():
+                result += (
+                    "\n\nHeartbeat checklist (memory/HEARTBEAT.md) is empty. "
+                    "Ask the user what they want to check periodically, "
+                    "then append `- [ ] ...` items under the Checklist section. "
+                    "Keep the reply short."
+                )
         return result
     except ValueError as e:
         return f"Error: {e}"

@@ -46,12 +46,14 @@ project root/
 ├── skills/                  # Instruction skills (git-tracked, user-edited)
 │   └── skill_name/
 │       └── SKILL.md
+├── config/                  # Agent behavior config (git-tracked, user-edited)
+│   └── AGENTS.md
 ├── memory/                  # All memory (gitignored)
-│   ├── AGENTS.md
 │   ├── IDENTITY.md
 │   ├── SOUL.md
 │   ├── USER.md
 │   ├── MEMORY.md
+│   ├── HEARTBEAT.md
 │   └── daily/
 │       └── YYYY-MM-DD.md
 ├── pyproject.toml           # Package metadata + dependencies
@@ -117,7 +119,7 @@ cat memory/USER.md
 
 Markdown memory files in `memory/`, injected as bootstrap context into the system prompt on every turn:
 
-- **`AGENTS.md`** — Agent behavior rules and working guidelines (tool usage, persistence rules, memory rules, file safety, email rules). Injected into the system prompt `<instructions>` block. User-editable — customize how the agent operates without touching Python code. Auto-seeded with a default template on first access.
+- **`config/AGENTS.md`** — Agent behavior rules and working guidelines (profile rules, memory rules, file safety rules, email rules). Injected into the system prompt `<instructions>` block. Git-tracked — edit directly to customize how the agent operates.
 - **`IDENTITY.md`** — Agent identity metadata (name, creature type, vibe, emoji, avatar). Injected into the system prompt. Updated by the LLM via `update_identity` tool when the user sets the agent's name, emoji, or avatar.
 - **`SOUL.md`** — Agent behavioral rules (core truths, boundaries, tone, continuity). Injected into the system prompt instruction area. Updated by the LLM via `update_soul` tool when the user sets behavior rules (tone, language, boundaries).
 - **`USER.md`** — User profile. Injected into the system prompt context area. Updated by the LLM via `update_user_profile` tool when it learns personal info (name, role, location, interests).
@@ -149,7 +151,7 @@ The `memory/` directory is gitignored — never commit it.
 
 Heartbeat is a special use of the cron system for periodic background checks (email, calendar, etc.) that only notify the user when something needs attention. Implemented as:
 
-- **`memory/HEARTBEAT.md`** — User-editable checklist of things to check periodically
+- **`memory/HEARTBEAT.md`** — Checklist of things to check periodically. User- and agent-editable (agent can add/remove items on request via `write_file`/`edit_file`)
 - **`skills/heartbeat/SKILL.md`** — Instruction skill teaching the agent the heartbeat workflow
 - **`silent_ok` flag on cron jobs** — When set, replies of `HEARTBEAT_OK` are swallowed silently
 

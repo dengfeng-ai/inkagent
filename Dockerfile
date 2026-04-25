@@ -7,6 +7,7 @@ COPY inkagent/ inkagent/
 RUN pip install --no-cache-dir .
 
 COPY skills/ skills/
+COPY config/ config/
 
 RUN mkdir -p memory/daily conversations
 

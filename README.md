@@ -117,7 +117,7 @@ For architecture details and development info, see [CLAUDE.md](CLAUDE.md).
 - [x] Memory search (sqlite-vec + OpenAI embeddings, graceful degradation)
 - [x] Instruction skills — Markdown-based workflow definitions, separated from tools
 - [x] Gmail tools (IMAP/SMTP + App Password)
-- [x] Heartbeat — periodic proactive check-in (reviews `HEARTBEAT.md` checklist, alerts only when needed)
+- [x] Heartbeat — periodic proactive check-in (reviews `memory/HEARTBEAT.md` checklist, alerts only when needed)
 - [ ] Publish to PyPI
 
 ## License

@@ -5,6 +5,7 @@ Files:
 - SOUL.md              — agent behavioral rules (core truths, boundaries, tone, continuity)
 - USER.md              — user personal info (name, role, preferences)
 - MEMORY.md            — long-term memory (facts, preferences, decisions, events)
+- HEARTBEAT.md         — periodic heartbeat checklist (items the agent checks on cron)
 - daily/YYYY-MM-DD.md  — daily logs (ephemeral, append-only)
 """
 
@@ -16,6 +17,7 @@ from datetime import date, datetime, timedelta
 from inkagent.config import (
     AGENTS_PATH,
     DAILY_DIR,
+    HEARTBEAT_PATH,
     IDENTITY_PATH,
     LONG_TERM_PATH,
     MEMORY_DIR,
@@ -26,41 +28,6 @@ from inkagent.config import (
 logger = logging.getLogger(__name__)
 
 PROMOTED_MARKER = "<!-- promoted -->"
-
-AGENTS_TEMPLATE = """\
-# AGENTS.md
-
-_Agent behavior rules and working guidelines. Injected into every system prompt. Edit this file to customize how the agent operates._
-
-## Tool usage
-
-You have access to tools — use them when appropriate.
-
-## Persistence rules
-
-You MUST call the matching tool whenever any of these apply:
-- User sets your name, emoji, avatar, or creature type → call update_identity (writes IDENTITY.md).
-- User tells you how to behave, including tone, language, response style, things to do or avoid → call update_soul (writes SOUL.md).
-- You learn durable facts about the user (name, role, location, interests) → call update_user_profile (writes USER.md).
-
-## Memory rules
-
-1. **LOGGING**: After each conversation turn, call log_daily to record any new facts, preferences, decisions, topics discussed, or action items. Do this proactively — do NOT wait for the user to ask you to remember. If the user shares personal info, opinions, plans, or anything worth noting, log it.
-2. **SAVING**: When the user explicitly asks you to remember something durable, call save_memory to persist it to long-term memory immediately — don't make them wait for overnight promotion.
-3. **RECALLING**: When the user asks about something you might have discussed before, or asks "do you remember / know …", you MUST call recall_memory to search before answering. Never say "I don't know" or "I don't have that information" without searching first.
-
-Do NOT read or modify memory.db — it is an internal database managed automatically.
-
-## File safety rules
-
-- Within this project, you may only create or modify files inside: memory/ and conversations/. All other project files (inkagent/, tools/, skills/, etc.) are read-only.
-- Files outside this project are unrestricted — you can read and write them normally.
-- Do NOT use run_shell to bypass these restrictions (e.g. writing to project files that write_file/edit_file would block).
-
-## Email rules
-
-When presenting email content (from gmail_search, gmail_read), keep subjects, body text, and other content in their original language. Do not translate or paraphrase — show them as-is.
-"""
 
 IDENTITY_TEMPLATE = """\
 # IDENTITY.md
@@ -110,6 +77,14 @@ MEMORY_TEMPLATE = """\
 _Long-term memory. Important facts, preferences, and decisions are saved here — either explicitly via save_memory or automatically promoted from daily logs._
 """
 
+HEARTBEAT_TEMPLATE = """\
+# HEARTBEAT.md
+
+_Checklist for periodic heartbeat checks. Add one `- [ ] ...` line per item you want the agent to check when the heartbeat fires._
+
+## Checklist
+"""
+
 
 def _ensure_dir() -> None:
     os.makedirs(MEMORY_DIR, exist_ok=True)
@@ -153,14 +128,9 @@ def is_first_run() -> bool:
 def get_agents() -> str:
     """Return agent behavior rules for the system prompt.
 
-    Seeds AGENTS.md with a default template on first access so the user
-    has a starting point to customize.
+    AGENTS.md lives in config/ (git-tracked) — read it as-is.
     """
-    content = _read_file(AGENTS_PATH).strip()
-    if not content:
-        _write_file(AGENTS_PATH, AGENTS_TEMPLATE)
-        return AGENTS_TEMPLATE.strip()
-    return content
+    return _read_file(AGENTS_PATH).strip()
 
 
 def get_identity() -> str:
@@ -200,6 +170,25 @@ def get_user_profile() -> str:
         _write_file(USER_PATH, USER_TEMPLATE)
         return USER_TEMPLATE.strip()
     return content
+
+
+def get_heartbeat() -> str:
+    """Return the heartbeat checklist, seeding a default template on first access.
+
+    HEARTBEAT.md is read on-demand by the heartbeat skill, not injected into
+    the system prompt. Seeding guarantees a consistent structure for user/agent
+    edits.
+    """
+    content = _read_file(HEARTBEAT_PATH).strip()
+    if not content:
+        _write_file(HEARTBEAT_PATH, HEARTBEAT_TEMPLATE)
+        return HEARTBEAT_TEMPLATE.strip()
+    return content
+
+
+def heartbeat_needs_setup() -> bool:
+    """True when HEARTBEAT.md is missing or still the untouched default template."""
+    return _is_template(HEARTBEAT_PATH, HEARTBEAT_TEMPLATE)
 
 
 def update_identity(content: str) -> str:
