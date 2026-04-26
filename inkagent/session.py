@@ -14,6 +14,11 @@ CONVERSATIONS_DIR = Path(_CONVERSATIONS_DIR_STR)
 _sessions: dict[str, list[dict]] = {}
 _session_files: dict[str, Path] = {}
 
+# Per-session identifier for the *current* conversation. Distinct from
+# session_id: rolls over on /new (reset_conversation) so each conversation
+# becomes its own bounded unit (file basename + Langfuse session_id).
+_conversation_ids: dict[str, str] = {}
+
 # Tracks the session_id of the currently running agent turn.
 # Uses ContextVar so each thread gets its own value — safe under concurrency.
 current_session_id: contextvars.ContextVar[str] = contextvars.ContextVar(
@@ -40,6 +45,20 @@ def get_conversation(session_id: str) -> list[dict]:
     return _sessions[session_id]
 
 
+def get_conversation_id(session_id: str) -> str:
+    """Stable identifier for the *current* conversation in this session.
+
+    Generated lazily on first call (using a wall-clock timestamp), kept
+    until ``reset_conversation`` clears it. Used as both the conversation
+    file's basename and the Langfuse session_id, so file and trace always
+    refer to the same conversation.
+    """
+    if session_id not in _conversation_ids:
+        ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        _conversation_ids[session_id] = f"{ts}_{session_id}"
+    return _conversation_ids[session_id]
+
+
 def make_message(role: str, content: str) -> dict:
     """Create a conversation message dict with a timestamp."""
     return {
@@ -53,8 +72,7 @@ def save_conversation(session_id: str) -> None:
     """Save conversation to the session JSON file."""
     if session_id not in _session_files:
         CONVERSATIONS_DIR.mkdir(exist_ok=True)
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        _session_files[session_id] = CONVERSATIONS_DIR / f"{timestamp}_{session_id}.json"
+        _session_files[session_id] = CONVERSATIONS_DIR / f"{get_conversation_id(session_id)}.json"
     conversation = _sessions.get(session_id, [])
     _session_files[session_id].write_text(
         json.dumps(conversation, ensure_ascii=False, indent=2)
@@ -70,6 +88,7 @@ def reset_conversation(session_id: str) -> int:
     if count:
         save_conversation(session_id)
         _session_files.pop(session_id, None)
+    _conversation_ids.pop(session_id, None)
     _sessions[session_id] = []
     return count
 

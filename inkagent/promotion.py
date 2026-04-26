@@ -28,18 +28,21 @@ def _promote_llm(prompt: str, model: str) -> str:
     return result
 
 
-@track()
 def maybe_promote() -> None:
-    """Check if yesterday's daily log needs promotion; if so, ask LLM to curate."""
+    """Gate: only enter the traced promotion routine when work is needed."""
     if not memory.needs_promotion():
         return
+    _run_promotion()
 
+
+@track(name="promotion")
+def _run_promotion() -> None:
     ctx = memory.get_promotion_context()
     prompt = PROMOTION_PROMPT.format(**ctx)
     model = get_small_model()
 
     logger.info("Running memory promotion for %s", ctx["date"])
-    update_current_span(name="promotion", input={"date": ctx["date"]})
+    update_current_span(input={"date": ctx["date"]})
     try:
         text = _promote_llm(prompt, model)
     except LLMError as e:

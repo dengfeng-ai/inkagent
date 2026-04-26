@@ -116,5 +116,6 @@ def clean_session():
     yield
     session._sessions.clear()
     session._session_files.clear()
+    session._conversation_ids.clear()
     session._locks.clear()
     session.current_session_id.set("cli")

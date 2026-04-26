@@ -30,11 +30,16 @@ _DEFAULTS: dict[str, dict[str, str]] = {
 _provider_instance: LLMProvider | None = None
 
 
+def get_provider_name() -> str:
+    """Return the configured provider name (no instantiation)."""
+    return os.environ.get("LLM_PROVIDER", "anthropic").lower()
+
+
 def get_provider() -> LLMProvider:
     """Return the singleton LLM provider (created on first call)."""
     global _provider_instance
     if _provider_instance is None:
-        name = os.environ.get("LLM_PROVIDER", "anthropic").lower()
+        name = get_provider_name()
         if name == "openai-codex":
             from inkagent.providers.openai_codex import OpenAICodexProvider
 
@@ -52,13 +57,13 @@ def get_provider() -> LLMProvider:
 
 def get_model() -> str:
     """Return the main model name from env or provider default."""
-    name = os.environ.get("LLM_PROVIDER", "anthropic").lower()
+    name = get_provider_name()
     return os.environ.get("LLM_MODEL", _DEFAULTS.get(name, _DEFAULTS["anthropic"])["model"])
 
 
 def get_small_model() -> str:
     """Return the small/cheap model for auxiliary tasks (compression, promotion)."""
-    name = os.environ.get("LLM_PROVIDER", "anthropic").lower()
+    name = get_provider_name()
     return os.environ.get(
         "LLM_SMALL_MODEL",
         _DEFAULTS.get(name, _DEFAULTS["anthropic"])["small_model"],
@@ -73,5 +78,6 @@ __all__ = [
     "Usage",
     "get_model",
     "get_provider",
+    "get_provider_name",
     "get_small_model",
 ]

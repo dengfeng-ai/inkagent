@@ -12,10 +12,10 @@ from inkagent.config import MAX_REPLY_TOKENS, MAX_TOOL_ROUNDS
 from inkagent.prompts import SYSTEM_PROMPT, ONBOARDING_HINT
 from inkagent.skill_loader import load_skills, build_skill_prompt
 import inkagent.session as _session
-from inkagent.session import get_conversation, save_conversation, make_message
+from inkagent.session import get_conversation, get_conversation_id, save_conversation, make_message
 from inkagent.compression import maybe_compress
 from inkagent.promotion import maybe_promote
-from inkagent.providers import get_provider, get_model, LLMError
+from inkagent.providers import get_provider, get_provider_name, get_model, LLMError
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ from inkagent.tracing import (
     track as _track,
     update_current_span as _update_span,
     update_current_generation as _update_gen,
+    trace_attributes as _trace_attributes,
     flush as _flush_traces,
 )
 
@@ -32,7 +33,18 @@ import inkagent.tools  # noqa: F401
 StreamCallback = Callable[[str], None]
 
 
-@_track()
+def _trace_user_id(session_id: str) -> str:
+    """Derive a stable user identifier from a session_id.
+
+    Cron jobs spawn ephemeral sessions like ``"{base}_cron_{id}_{ts}"``;
+    collapse those back to the originating session so all traces from the
+    same chat group under one user_id in Langfuse.
+    """
+    if "_cron_" in session_id:
+        return session_id.split("_cron_", 1)[0]
+    return session_id
+
+
 def run_agent(user_input: str, session_id: str = "cli") -> str:
     """Run one full agentic turn: send message, loop on tool calls, return final text."""
     return _run_agent_impl(user_input, session_id=session_id, on_stream=None)
@@ -47,11 +59,27 @@ def stream_agent(
     return _run_agent_impl(user_input, session_id=session_id, on_stream=on_stream)
 
 
-@_track()
+@_track(name="agent_turn")
 def _run_agent_impl(
     user_input: str,
     session_id: str = "cli",
     on_stream: StreamCallback | None = None,
+) -> str:
+    provider_name = get_provider_name()
+    model = get_model()
+    with _trace_attributes(
+        session_id=get_conversation_id(session_id),
+        user_id=_trace_user_id(session_id),
+        tags=[f"provider:{provider_name}", f"model:{model}"],
+        metadata={"provider": provider_name, "model": model},
+    ):
+        return _run_agent_body(user_input, session_id, on_stream)
+
+
+def _run_agent_body(
+    user_input: str,
+    session_id: str,
+    on_stream: StreamCallback | None,
 ) -> str:
     _update_span(input=user_input)
 
@@ -149,7 +177,7 @@ def _run_agent_impl(
                         on_stream(reply)
                     conversation.append(make_message("assistant", reply))
                     save_conversation(session_id)
-                    _update_span(output=reply)
+                    _update_span(output=reply, metadata={"loops": loop_count})
                     _flush_traces()
                     logger.info("Total agent turn took %.1fs (%d LLM calls)", time.time() - t_start, loop_count)
                     return reply
