@@ -104,8 +104,8 @@ LLM_PROVIDER=anthropic
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | — | API key (required) |
-| `LLM_MODEL` | `claude-sonnet-4-20250514` | Main model |
-| `LLM_SMALL_MODEL` | `claude-haiku-4-5-20251001` | Small model (for compression and memory promotion) |
+| `LLM_MODEL` | `claude-opus-4-6` | Main model |
+| `LLM_SMALL_MODEL` | `claude-sonnet-4-6` | Small model (for compression and memory promotion) |
 
 ### Option B: OpenAI
 
@@ -119,8 +119,8 @@ LLM_PROVIDER=openai
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OPENAI_API_KEY` | — | API key (required) |
-| `LLM_MODEL` | `gpt-4o` | Main model |
-| `LLM_SMALL_MODEL` | `gpt-4o-mini` | Small model |
+| `LLM_MODEL` | `gpt-5.4` | Main model |
+| `LLM_SMALL_MODEL` | `gpt-5.4-mini` | Small model |
 
 ### Option C: ChatGPT Subscription (Codex OAuth)
 

@@ -104,8 +104,8 @@ LLM_PROVIDER=anthropic
 | 环境变量 | 默认值 | 说明 |
 |----------|--------|------|
 | `ANTHROPIC_API_KEY` | — | API key（必填） |
-| `LLM_MODEL` | `claude-sonnet-4-20250514` | 主模型 |
-| `LLM_SMALL_MODEL` | `claude-haiku-4-5-20251001` | 小模型（用于压缩和记忆提升） |
+| `LLM_MODEL` | `claude-opus-4-6` | 主模型 |
+| `LLM_SMALL_MODEL` | `claude-sonnet-4-6` | 小模型（用于压缩和记忆提升） |
 
 ### 方式 B：OpenAI
 
@@ -119,8 +119,8 @@ LLM_PROVIDER=openai
 | 环境变量 | 默认值 | 说明 |
 |----------|--------|------|
 | `OPENAI_API_KEY` | — | API key（必填） |
-| `LLM_MODEL` | `gpt-4o` | 主模型 |
-| `LLM_SMALL_MODEL` | `gpt-4o-mini` | 小模型 |
+| `LLM_MODEL` | `gpt-5.4` | 主模型 |
+| `LLM_SMALL_MODEL` | `gpt-5.4-mini` | 小模型 |
 
 ### 方式 C：ChatGPT 订阅（Codex OAuth）
 

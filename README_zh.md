@@ -117,7 +117,6 @@ inkagent 是一个 Agent 循环：你发送消息 → LLM 决定调用哪些工�
 - [x] 指令技能 — 基于 Markdown 的工作流定义，与工具分离
 - [x] Gmail 工具（IMAP/SMTP + App Password）
 - [x] 心跳 — 定期主动检查（读取 `memory/HEARTBEAT.md` 清单，有事才通知）
-- [ ] 发布到 PyPI
 
 ## 许可证
 
