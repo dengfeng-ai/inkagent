@@ -56,10 +56,13 @@ cd inkagent
 cp .env.example .env
 ```
 
-编辑 `.env`，填入你的 API Key：
+编辑 `.env`，取消 Anthropic 配置块的注释并填入你的 API Key：
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-xxxxx
+LLM_PROVIDER=anthropic
+LLM_MODEL=claude-opus-4-6
+LLM_SMALL_MODEL=claude-sonnet-4-6
 ```
 
 ### Docker（推荐）

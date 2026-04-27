@@ -57,10 +57,13 @@ cd inkagent
 cp .env.example .env
 ```
 
-Edit `.env` and fill in your API key:
+Edit `.env`, uncomment the Anthropic block, and fill in your API key:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-xxxxx
+LLM_PROVIDER=anthropic
+LLM_MODEL=claude-opus-4-6
+LLM_SMALL_MODEL=claude-sonnet-4-6
 ```
 
 ### Docker (recommended)
