@@ -67,7 +67,11 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
 
 ```bash
 docker build -t inkagent .
+```
 
+To run the CLI:
+
+```bash
 docker run -it --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
@@ -91,6 +95,8 @@ Requires **Python 3.11+**.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
+
+# Run CLI
 python -m inkagent
 
 # Run Telegram bot
