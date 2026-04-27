@@ -10,6 +10,7 @@ inkagent/        # Python package — CLI, Telegram bot, agentic loop, providers
 skills/          # Instruction skills (Markdown, git-tracked, user-edited)
 config/          # Agent behavior config (AGENTS.md, git-tracked, user-edited)
 memory/          # All runtime memory (gitignored)
+conversations/   # Per-session conversation history as JSON (gitignored)
 tests/
 pyproject.toml
 Dockerfile
