@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
-from datetime import date
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from inkagent import registry, memory
-from inkagent.config import MAX_REPLY_TOKENS, MAX_TOOL_ROUNDS
+from inkagent.config import DEFAULT_TIMEZONE, MAX_REPLY_TOKENS, MAX_TOOL_ROUNDS
 from inkagent.prompts import SYSTEM_PROMPT, ONBOARDING_HINT
 from inkagent.skill_loader import load_skills, build_skill_prompt
 import inkagent.session as _session
@@ -102,9 +103,16 @@ def _run_agent_body(
         instruction_skills = load_skills()
         skill_prompt = build_skill_prompt(instruction_skills)
 
+        now = datetime.now(ZoneInfo(DEFAULT_TIMEZONE))
+        offset = now.strftime("%z")  # e.g. "+0800"
+        current_time = (
+            f"{now.strftime('%Y-%m-%d %H:%M')} {DEFAULT_TIMEZONE} "
+            f"(UTC{offset[:3]}:{offset[3:]})"
+        )
+
         system = SYSTEM_PROMPT.format(
             agents=agents,
-            current_date=date.today().isoformat(),
+            current_time=current_time,
             identity=identity,
             soul=soul,
             user_profile=user_profile,

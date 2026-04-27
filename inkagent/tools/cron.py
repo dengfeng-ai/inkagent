@@ -1,9 +1,10 @@
 """Cron skills — create, list, and delete scheduled tasks."""
 
 import inkagent.session as _session
+from inkagent.config import DEFAULT_TIMEZONE
 from inkagent.memory import get_heartbeat, heartbeat_needs_setup
 from inkagent.registry import register
-from inkagent.scheduler import DEFAULT_TIMEZONE, add_job, remove_job, list_jobs
+from inkagent.scheduler import add_job, remove_job, list_jobs
 
 
 @register(
@@ -13,7 +14,7 @@ from inkagent.scheduler import DEFAULT_TIMEZONE, add_job, remove_job, list_jobs
         "The prompt will be sent to the agent at each trigger time, "
         "and the reply delivered to the current chat session. "
         "Cron format: minute hour day month weekday (e.g. '0 9 * * *' = daily at 9 AM). "
-        "Times are interpreted in the user's timezone (default: Asia/Shanghai). "
+        f"Times are interpreted in the user's timezone (default: {DEFAULT_TIMEZONE}). "
         "Set silent_ok=true for heartbeat-style jobs — if the agent replies "
         "with only HEARTBEAT_OK, no message is sent to the user."
     ),
@@ -34,7 +35,7 @@ from inkagent.scheduler import DEFAULT_TIMEZONE, add_job, remove_job, list_jobs
             },
             "timezone": {
                 "type": "string",
-                "description": "IANA timezone (e.g. 'Asia/Shanghai', 'America/New_York'). Default: Asia/Shanghai",
+                "description": f"IANA timezone (e.g. 'Asia/Singapore', 'America/New_York'). Default: {DEFAULT_TIMEZONE}",
             },
             "silent_ok": {
                 "type": "boolean",

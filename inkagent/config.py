@@ -1,8 +1,36 @@
 """Shared constants for the agent package."""
 
 import os
+from datetime import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 __version__ = "0.1.0"
+
+
+def _resolve_default_timezone() -> str:
+    """Resolve the default IANA timezone.
+
+    Order: INKAGENT_TIMEZONE env > system local timezone > "Asia/Singapore".
+    """
+    env_tz = os.environ.get("INKAGENT_TIMEZONE", "").strip()
+    if env_tz:
+        try:
+            ZoneInfo(env_tz)
+            return env_tz
+        except ZoneInfoNotFoundError:
+            pass
+    sys_tz = datetime.now().astimezone().tzinfo
+    if sys_tz is not None:
+        key = getattr(sys_tz, "key", None) or str(sys_tz)
+        try:
+            ZoneInfo(key)
+            return key
+        except ZoneInfoNotFoundError:
+            pass
+    return "Asia/Singapore"
+
+
+DEFAULT_TIMEZONE = _resolve_default_timezone()
 
 # ---------------------------------------------------------------------------
 # Directory layout — centralised so a future migration to ~/.inkagent/ only

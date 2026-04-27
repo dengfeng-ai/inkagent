@@ -15,9 +15,7 @@ from zoneinfo import ZoneInfo
 
 from croniter import croniter
 
-from inkagent.config import CRONS_PATH
-
-DEFAULT_TIMEZONE = "Asia/Shanghai"
+from inkagent.config import CRONS_PATH, DEFAULT_TIMEZONE
 
 logger = logging.getLogger(__name__)
 
