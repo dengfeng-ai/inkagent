@@ -5,13 +5,14 @@ import logging
 import os
 import threading
 import time
+from dataclasses import dataclass
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from telegram import BotCommand, Update  # noqa: E402
+from telegram import BotCommand, Message, Update  # noqa: E402
 from telegram.constants import ChatAction  # noqa: E402
-from telegram.error import BadRequest  # noqa: E402
+from telegram.error import BadRequest, RetryAfter  # noqa: E402
 from telegram.ext import (  # noqa: E402
     ApplicationBuilder,
     CommandHandler,
@@ -36,7 +37,11 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Telegram message length limit.
 MAX_MSG_LEN = 4096
-STREAM_THROTTLE_SECONDS = 0.4
+# Each streamed chunk is bounded below MAX_MSG_LEN so HTML markup expansion
+# (markdown -> <b>/<i>/<pre> tags) doesn't push us over the wire limit.
+CHUNK_SIZE = 3500
+STREAM_THROTTLE_SECONDS = 1.5
+TYPING_INTERVAL_SECONDS = 1.0
 STREAM_PLACEHOLDER = "…"
 
 
@@ -59,14 +64,26 @@ async def _send_long_message(update: Update, text: str) -> None:
         await update.message.reply_text(html[i:i + MAX_MSG_LEN], parse_mode="HTML")
 
 
+@dataclass
+class _Chunk:
+    message: Message
+    text: str
+    sealed: bool = False
+
+
 class TelegramStreamBuffer:
-    """Stream text into Telegram by editing a single message with throttling."""
+    """Stream text into Telegram across one-or-more chunked messages.
+
+    Edits are confined to the trailing ("active") chunk; once content spills
+    into a new chunk, the previous one is sealed and never edited again. This
+    bounds the per-message edit rate, which is what Telegram flood-controls.
+    """
 
     def __init__(self, update: Update) -> None:
         self._update = update
-        self._message = None
+        self._chunks: list[_Chunk] = []
         self._latest_text = ""
-        self._last_sent_text = ""
+        self._last_flushed_text = ""
         self._last_sent_at = 0.0
         self._lock = threading.Lock()
 
@@ -76,47 +93,66 @@ class TelegramStreamBuffer:
 
     def should_flush(self, *, force: bool = False) -> bool:
         with self._lock:
-            if not self._latest_text:
-                return False
-            if self._latest_text == self._last_sent_text and not force:
-                return False
-            if force:
-                return True
-            return (time.monotonic() - self._last_sent_at) >= STREAM_THROTTLE_SECONDS
+            text = self._latest_text
+        if not text:
+            return False
+        if text == self._last_flushed_text and not force:
+            return False
+        if force:
+            return True
+        return (time.monotonic() - self._last_sent_at) >= STREAM_THROTTLE_SECONDS
 
     async def flush(self, *, force: bool = False) -> None:
         with self._lock:
             text = self._latest_text
         if not text:
+            text = STREAM_PLACEHOLDER
+        if text == self._last_flushed_text and not force:
             return
-        if text == self._last_sent_text and not force:
-            return
-        await self._send_or_edit(text)
+
+        html = markdown_to_telegram_html(text) or STREAM_PLACEHOLDER
+        slices = [html[i:i + CHUNK_SIZE] for i in range(0, len(html), CHUNK_SIZE)]
+
+        for i, slice_html in enumerate(slices):
+            if i < len(self._chunks):
+                chunk = self._chunks[i]
+                if chunk.sealed or chunk.text == slice_html:
+                    continue
+                await self._edit_with_retry(chunk.message, slice_html)
+                chunk.text = slice_html
+            else:
+                if self._chunks:
+                    self._chunks[-1].sealed = True
+                msg = await self._send_with_retry(slice_html)
+                self._chunks.append(_Chunk(message=msg, text=slice_html))
+
+        self._last_flushed_text = text
+        self._last_sent_at = time.monotonic()
 
     async def finalize(self, text: str) -> None:
         self.push(text or STREAM_PLACEHOLDER)
         await self.flush(force=True)
 
-    async def _send_or_edit(self, text: str) -> None:
-        html = markdown_to_telegram_html(text)
-        primary = html[:MAX_MSG_LEN] or STREAM_PLACEHOLDER
-        overflow = html[MAX_MSG_LEN:]
-
-        if self._message is None:
-            self._message = await self._update.message.reply_text(primary, parse_mode="HTML")
-        else:
+    async def _edit_with_retry(self, message: Message, html: str) -> None:
+        while True:
             try:
-                await self._message.edit_text(primary, parse_mode="HTML")
+                await message.edit_text(html, parse_mode="HTML")
+                return
             except BadRequest as exc:
-                if "message is not modified" not in str(exc).lower():
-                    raise
+                if "message is not modified" in str(exc).lower():
+                    return
+                raise
+            except RetryAfter as exc:
+                logger.warning("Telegram edit flood-controlled, sleeping %.1fs", exc.retry_after)
+                await asyncio.sleep(exc.retry_after + 0.5)
 
-        self._last_sent_text = text
-        self._last_sent_at = time.monotonic()
-
-        if overflow:
-            for i in range(0, len(overflow), MAX_MSG_LEN):
-                await self._update.message.reply_text(overflow[i:i + MAX_MSG_LEN], parse_mode="HTML")
+    async def _send_with_retry(self, html: str) -> Message:
+        while True:
+            try:
+                return await self._update.message.reply_text(html, parse_mode="HTML")
+            except RetryAfter as exc:
+                logger.warning("Telegram send flood-controlled, sleeping %.1fs", exc.retry_after)
+                await asyncio.sleep(exc.retry_after + 0.5)
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -170,7 +206,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             if stream.should_flush():
                 await stream.flush()
             try:
-                await asyncio.wait_for(stop_typing.wait(), timeout=0.4)
+                await asyncio.wait_for(stop_typing.wait(), timeout=TYPING_INTERVAL_SECONDS)
             except asyncio.TimeoutError:
                 pass
 
