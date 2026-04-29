@@ -6,13 +6,13 @@
 2. [选择 LLM 提供商](#2-选择-llm-提供商)
 3. [记忆系统](#3-记忆系统)
 4. [Telegram 机器人](#4-telegram-机器人)
-4.5. [WhatsApp 机器人](#45-whatsapp-机器人)
-5. [Web 搜索](#5-web-搜索)
-6. [Gmail 集成](#6-gmail-集成)
-7. [定时任务与心跳检查](#7-定时任务与心跳检查)
-8. [自定义技能](#8-自定义技能)
-9. [会话控制](#9-会话控制)
-10. [完整环境变量参考](#10-完整环境变量参考)
+5. [WhatsApp 机器人](#5-whatsapp-机器人)
+6. [Web 搜索](#6-web-搜索)
+7. [Gmail 集成](#7-gmail-集成)
+8. [定时任务与心跳检查](#8-定时任务与心跳检查)
+9. [自定义技能](#9-自定义技能)
+10. [会话控制](#10-会话控制)
+11. [完整环境变量参考](#11-完整环境变量参考)
 
 ---
 
@@ -74,7 +74,7 @@ docker run --env-file .env \
   -v $(pwd)/conversations:/app/conversations \
   inkagent python -m inkagent.bot
 
-# WhatsApp 机器人模式（镜像里也要装 libmagic，详见 4.5 节）
+# WhatsApp 机器人模式（镜像里也要装 libmagic，详见第 5 节）
 docker run -it --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
@@ -279,7 +279,7 @@ python -m inkagent.bot
 
 ---
 
-## 4.5 WhatsApp 机器人
+## 5. WhatsApp 机器人
 
 通过 WhatsApp 跟 agent 对话——手机、网页、桌面端都能用。
 
@@ -361,7 +361,7 @@ bot 作为 Linked Device 挂在**一个** WhatsApp 账号上，那个账号收�
 
 ---
 
-## 5. Web 搜索
+## 6. Web 搜索
 
 让 agent 具备搜索互联网的能力。
 
@@ -397,7 +397,7 @@ BRAVE_API_KEY=BSA-xxxxx
 
 ---
 
-## 6. Gmail 集成
+## 7. Gmail 集成
 
 让 agent 搜索、阅读和发送 Gmail 邮件。
 
@@ -452,7 +452,7 @@ GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
 
 ---
 
-## 7. 定时任务与心跳检查
+## 8. 定时任务与心跳检查
 
 让 agent 按时间表自动执行任务，主动通知你。
 
@@ -529,7 +529,7 @@ agent 会创建一个 `silent_ok=true` 的 cron 任务。当没有需要注意�
 
 ---
 
-## 8. 自定义技能
+## 9. 自定义技能
 
 通过 Markdown 文件教 agent 新的工作流程，不需要写代码。技能指导 agent 如何组合现有工具完成特定任务。
 
@@ -590,7 +590,7 @@ requires:
 
 ---
 
-## 9. 会话控制
+## 10. 会话控制
 
 ### CLI 模式
 
@@ -625,7 +625,7 @@ requires:
 
 ---
 
-## 10. 完整环境变量参考
+## 11. 完整环境变量参考
 
 以下是所有环境变量的汇总。完整的模板参见项目根目录的 `.env.example`。
 

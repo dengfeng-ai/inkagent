@@ -6,13 +6,13 @@
 2. [Choosing an LLM Provider](#2-choosing-an-llm-provider)
 3. [Memory System](#3-memory-system)
 4. [Telegram Bot](#4-telegram-bot)
-4.5. [WhatsApp Bot](#45-whatsapp-bot)
-5. [Web Search](#5-web-search)
-6. [Gmail Integration](#6-gmail-integration)
-7. [Scheduled Tasks & Heartbeat](#7-scheduled-tasks--heartbeat)
-8. [Custom Skills](#8-custom-skills)
-9. [Session Control](#9-session-control)
-10. [Environment Variables Reference](#10-environment-variables-reference)
+5. [WhatsApp Bot](#5-whatsapp-bot)
+6. [Web Search](#6-web-search)
+7. [Gmail Integration](#7-gmail-integration)
+8. [Scheduled Tasks & Heartbeat](#8-scheduled-tasks--heartbeat)
+9. [Custom Skills](#9-custom-skills)
+10. [Session Control](#10-session-control)
+11. [Environment Variables Reference](#11-environment-variables-reference)
 
 ---
 
@@ -74,7 +74,7 @@ docker run --env-file .env \
   -v $(pwd)/conversations:/app/conversations \
   inkagent python -m inkagent.bot
 
-# WhatsApp bot mode (also requires libmagic in the image; see Section 4.5)
+# WhatsApp bot mode (also requires libmagic in the image; see Section 5)
 docker run -it --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
@@ -279,7 +279,7 @@ Send any message to your bot on Telegram. If it replies, the setup is complete.
 
 ---
 
-## 4.5 WhatsApp Bot
+## 5. WhatsApp Bot
 
 Chat with the agent via WhatsApp from any device — phone, web, or desktop.
 
@@ -383,7 +383,7 @@ WhatsApp now shows for any third-party automation client.
 
 ---
 
-## 5. Web Search
+## 6. Web Search
 
 Give the agent the ability to search the internet.
 
@@ -419,7 +419,7 @@ After launching, tell the agent "search for today's news". The agent will call t
 
 ---
 
-## 6. Gmail Integration
+## 7. Gmail Integration
 
 Let the agent search, read, and send Gmail messages.
 
@@ -474,7 +474,7 @@ After launching, tell the agent "check my unread emails". The agent will call th
 
 ---
 
-## 7. Scheduled Tasks & Heartbeat
+## 8. Scheduled Tasks & Heartbeat
 
 Let the agent execute tasks on a schedule and proactively notify you.
 
@@ -551,7 +551,7 @@ Confirm the heartbeat task has been created.
 
 ---
 
-## 8. Custom Skills
+## 9. Custom Skills
 
 Teach the agent new workflows through Markdown files — no code required. Skills guide the agent on how to combine existing tools to accomplish specific tasks.
 
@@ -612,7 +612,7 @@ The repo ships with one skill under `skills/`:
 
 ---
 
-## 9. Session Control
+## 10. Session Control
 
 ### CLI Mode
 
@@ -647,7 +647,7 @@ Conversation history is automatically saved in the `conversations/` directory (J
 
 ---
 
-## 10. Environment Variables Reference
+## 11. Environment Variables Reference
 
 A summary of all environment variables. See `.env.example` in the project root for the full template.
 

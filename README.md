@@ -43,9 +43,9 @@ Start simple, add capabilities as you need them. Each level builds on the previo
 | **Start here** | CLI chat with AI | One API key | [Quick Start](#quick-start) |
 | **Mobile access** | Chat via Telegram on your phone | + Telegram bot token | [Telegram](docs/guide-en.md#4-telegram-bot) |
 | **WhatsApp access** | Chat via WhatsApp from any device | + WhatsApp owner phone (paired by QR) | [WhatsApp](#whatsapp-bot) |
-| **Web-connected** | Agent can search the internet | + Brave API key | [Web Search](docs/guide-en.md#5-web-search) |
-| **Email assistant** | Agent reads and sends Gmail | + Gmail App Password | [Gmail](docs/guide-en.md#6-gmail-integration) |
-| **Proactive assistant** | Scheduled tasks, background checks | Telegram + heartbeat setup | [Scheduled Tasks](docs/guide-en.md#7-scheduled-tasks--heartbeat) |
+| **Web-connected** | Agent can search the internet | + Brave API key | [Web Search](docs/guide-en.md#6-web-search) |
+| **Email assistant** | Agent reads and sends Gmail | + Gmail App Password | [Gmail](docs/guide-en.md#7-gmail-integration) |
+| **Proactive assistant** | Scheduled tasks, background checks | Telegram + heartbeat setup | [Scheduled Tasks](docs/guide-en.md#8-scheduled-tasks--heartbeat) |
 | **Better memory** | Semantic search over past conversations | + OpenAI API key (for embeddings) | [Memory Search](docs/guide-en.md#3-memory-system) |
 
 > **No API key?** Use `LLM_PROVIDER=openai-codex` to run on your ChatGPT Plus/Pro subscription. See the [Provider Guide](docs/guide-en.md#2-choosing-an-llm-provider).
