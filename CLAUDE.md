@@ -28,6 +28,7 @@ Key design principles:
 - Markdown files — all memory storage
 - `sqlite-vec` — vector storage for semantic search over daily logs (`memory/memory.db`)
 - `python-telegram-bot` — Telegram bot interface
+- `neonize` — WhatsApp bot interface (unofficial WhatsApp Web protocol via whatsmeow). Requires libmagic on the host.
 - `httpx` + `trafilatura` — web search/fetch
 - `PyYAML` — YAML frontmatter parsing for instruction skills
 - `croniter` — cron expression parsing for scheduled tasks
@@ -41,6 +42,7 @@ pip install -e ".[langfuse]"             # with optional Langfuse tracing
 
 python -m inkagent                       # CLI (alias: inkagent)
 python -m inkagent.bot                   # Telegram bot (alias: inkagent-bot)
+python -m inkagent.whatsapp_bot          # WhatsApp bot (alias: inkagent-whatsapp)
 
 python -m inkagent.codex_auth            # one-time browser OAuth login (Codex)
 ```
@@ -59,6 +61,7 @@ Both the CLI and the bot call `load_dotenv()` at startup, so set these in a proj
 | `BRAVE_API_KEY` | — | Required for `web_search` tool |
 | `GMAIL_ADDRESS` | — | Required for Gmail tools |
 | `GMAIL_APP_PASSWORD` | — | Required for Gmail tools (generate at myaccount.google.com/apppasswords) |
+| `WHATSAPP_OWNER_PHONE` | — | Required for WhatsApp bot. Owner's phone digits with country code, no `+` (e.g. `6591234567`). Pair on first run by scanning the QR. |
 
 ## Memory System
 
@@ -85,9 +88,9 @@ The `memory/` directory is gitignored — never commit it.
 
 - Runs as an asyncio background task, checking every 60 seconds.
 - When a job fires, it calls `run_agent(prompt, session_id)` with a fresh session (timestamped session ID) and delivers the reply via a callback.
-- In Telegram bot mode, the scheduler starts automatically and sends replies to the bound chat.
-- In CLI mode, the scheduler does not run (no persistent event loop), but cron tools still work — jobs created in CLI take effect when the bot starts.
-- Jobs are bound to a `session_id` (e.g. `tg_123456`) at creation time via `session.current_session_id`.
+- In Telegram and WhatsApp bot modes, the scheduler starts automatically and sends replies to the bound chat.
+- In CLI mode, the scheduler does not run (no persistent event loop), but cron tools still work — jobs created in CLI take effect when a bot starts.
+- Jobs are bound to a `session_id` (e.g. `tg_123456`, `wa_6591234567`) at creation time via `session.current_session_id`. Each bot's scheduler callback only delivers jobs for its own prefix; if both bots run simultaneously, each handles its own jobs.
 - **Timezone-aware**: each job stores an IANA timezone (default from `INKAGENT_TIMEZONE` / system / `Asia/Singapore`). Cron expressions are interpreted in the job's timezone.
 - **Heartbeat mode**: jobs with `silent_ok: true` suppress notification when the agent replies with exactly `HEARTBEAT_OK`.
 
@@ -108,7 +111,20 @@ User-facing commands handled locally (not sent to the LLM):
 - `/new` — archive current conversation and start a fresh session (`session.reset_conversation()`)
 - `/compact` — force-compress conversation history (`compression.force_compress()`)
 
-In Telegram, these are native bot commands. In CLI, they are intercepted in the input loop.
+In Telegram, these are native bot commands. In WhatsApp, the bot intercepts `/new` and `/compact` as plain text. In CLI, they are intercepted in the input loop.
+
+## WhatsApp Bot
+
+`inkagent/whatsapp_bot.py` connects via the unofficial WhatsApp Web protocol using `neonize` (Python wrapper over Go's `whatsmeow`). Pairs as a Linked Device — first run prints a QR for scanning.
+
+- **Session ID convention**: `wa_<owner_phone>` (digits only, derived from `WHATSAPP_OWNER_PHONE`). Single-owner — non-owner messages are dropped silently.
+- **Persistence**: pairing/session state lives in `memory/whatsapp_session.db` (delete to force re-pair).
+- **Formatting**: `inkagent/whatsapp_format.py` converts Markdown to WhatsApp's syntax (`**bold**` → `*bold*`, `*italic*` → `_italic_`, headings → bold, links → `text (url)`). Code blocks/spans pass through unchanged.
+- **Streaming**: not implemented — replies are sent in full once the agent turn completes (chunked at 4096 chars).
+- **System dependency**: requires `libmagic` on the host (macOS: `brew install libmagic`; Debian/Ubuntu: `apt install libmagic1`).
+- **Pure-Python integration**: no Node.js subprocess (in contrast to OpenClaw's Baileys bridge). The Go shared library ships with neonize's wheel.
+
+**Test factoring**: the message-routing logic is extracted into `process_message(text, sender_user, chat_jid, owner_phone, send_fn)` so tests can exercise routing/formatting/commands without spinning up neonize.
 
 ## Skill System
 

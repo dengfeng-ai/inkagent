@@ -19,6 +19,7 @@ dependencies = [
     "croniter>=2.0.0",
     "sqlite-vec>=0.1.1",
     "PyYAML>=6.0",
+    "neonize>=0.3.17.post0",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +32,7 @@ dev = [
 [project.scripts]
 inkagent = "inkagent.cli:main"
 inkagent-bot = "inkagent.bot:main"
+inkagent-whatsapp = "inkagent.whatsapp_bot:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["inkagent"]
