@@ -144,6 +144,7 @@ For architecture details and development info, see [CLAUDE.md](CLAUDE.md).
 - [x] CLI + shell tool + Markdown memory
 - [x] LLM observability (Langfuse)
 - [x] Telegram bot interface
+- [x] WhatsApp bot interface (neonize / whatsmeow, QR pairing, no public webhook)
 - [x] Long-term memory + daily logs + auto-promotion
 - [x] File operation tools (read, write, edit, list)
 - [x] Scheduled tasks (cron scheduler + tools)
