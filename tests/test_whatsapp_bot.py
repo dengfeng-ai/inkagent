@@ -171,13 +171,15 @@ def test_long_reply_is_chunked(mock_agent):
     assert len(second) == 50
 
 
+@patch("inkagent.providers.get_model", return_value="claude-opus-4-7")
 @patch("inkagent.whatsapp_bot.reset_conversation", return_value=3)
-def test_new_command_resets_session(mock_reset):
+def test_new_command_resets_session(mock_reset, mock_get_model):
     send = AsyncMock()
     _run(process_message("/new", OWNER, CHAT_JID, OWNER, send))
     mock_reset.assert_called_once_with(f"wa_{OWNER}")
-    send.assert_awaited_once()
-    assert "New session" in send.await_args.args[1]
+    send.assert_awaited_once_with(
+        CHAT_JID, "New session started. Model: claude-opus-4-7"
+    )
 
 
 @patch("inkagent.whatsapp_bot.get_conversation", return_value=[{"role": "user"}])

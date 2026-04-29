@@ -162,8 +162,9 @@ async def process_message(
     session_module.current_session_id.set(session_id)
 
     if text == "/new":
-        count = reset_conversation(session_id)
-        await send_fn(chat_jid, f"New session started. ({count} archived)")
+        reset_conversation(session_id)
+        from inkagent.providers import get_model
+        await send_fn(chat_jid, f"New session started. Model: {get_model()}")
         return
     if text == "/compact":
         conversation = get_conversation(session_id)
