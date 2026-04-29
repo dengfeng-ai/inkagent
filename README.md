@@ -42,7 +42,7 @@ Start simple, add capabilities as you need them. Each level builds on the previo
 |-------|-------------|-------------------|-------|
 | **Start here** | CLI chat with AI | One API key | [Quick Start](#quick-start) |
 | **Mobile access** | Chat via Telegram on your phone | + Telegram bot token | [Telegram](docs/guide-en.md#4-telegram-bot) |
-| **WhatsApp access** | Chat via WhatsApp from any device | + WhatsApp owner phone (paired by QR) | [WhatsApp](#whatsapp-bot) |
+| **WhatsApp access** | Chat via WhatsApp from any device | + WhatsApp owner phone (paired by QR) | [WhatsApp](docs/guide-en.md#5-whatsapp-bot) |
 | **Web-connected** | Agent can search the internet | + Brave API key | [Web Search](docs/guide-en.md#6-web-search) |
 | **Email assistant** | Agent reads and sends Gmail | + Gmail App Password | [Gmail](docs/guide-en.md#7-gmail-integration) |
 | **Proactive assistant** | Scheduled tasks, background checks | Telegram + heartbeat setup | [Scheduled Tasks](docs/guide-en.md#8-scheduled-tasks--heartbeat) |
@@ -105,33 +105,12 @@ python -m inkagent
 
 # Run Telegram bot
 python -m inkagent.bot
+
+# Run WhatsApp bot (requires libmagic; see User Guide §5)
+python -m inkagent.whatsapp_bot
 ```
 
-### WhatsApp bot
-
-Connects via the unofficial WhatsApp Web protocol (`neonize` → `whatsmeow`),
-so no Meta Business approval, no public webhook, no message-template gymnastics —
-the bot pairs as a Linked Device on a WhatsApp account you control.
-
-**Recommended:** use a dedicated number (a second SIM, or WhatsApp Business
-on the same phone). Pairing the bot to your main account works technically
-but means it sees every chat you have and can send messages as you.
-
-```bash
-brew install libmagic           # macOS — neonize requires libmagic at runtime
-                                # (Debian/Ubuntu: apt install libmagic1)
-
-# .env
-WHATSAPP_OWNER_PHONE=6591234567 # digits only, with country code, no '+'
-
-python -m inkagent.whatsapp_bot # first run prints a QR — scan from
-                                # WhatsApp > Linked Devices on the bot's account
-```
-
-Session state is persisted to `memory/whatsapp_session.db`. Delete it to
-force re-pairing.
-
-For Telegram bot, provider options, Gmail, web search, scheduled tasks, and more — see the [User Guide](docs/guide-en.md).
+For Telegram bot, WhatsApp bot, provider options, Gmail, web search, scheduled tasks, and more — see the [User Guide](docs/guide-en.md).
 
 ## How It Works
 

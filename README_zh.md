@@ -41,7 +41,7 @@
 |------|-----------|---------|------|
 | **从这里开始** | 在终端和 AI 对话 | 一个 API Key | [快速开始](#快速开始) |
 | **移动访问** | 通过 Telegram 随时聊天 | + Telegram Bot Token | [Telegram 机器人](docs/guide-zh.md#4-telegram-机器人) |
-| **WhatsApp 访问** | 通过 WhatsApp 在任何设备上聊天 | + WhatsApp 主号手机号（QR 配对） | [WhatsApp 机器人](#whatsapp-机器人) |
+| **WhatsApp 访问** | 通过 WhatsApp 在任何设备上聊天 | + WhatsApp 主号手机号（QR 配对） | [WhatsApp 机器人](docs/guide-zh.md#5-whatsapp-机器人) |
 | **联网助手** | Agent 可以搜索互联网 | + Brave API Key | [Web 搜索](docs/guide-zh.md#6-web-搜索) |
 | **邮件助手** | Agent 可以读写 Gmail | + Gmail 应用专用密码 | [Gmail 集成](docs/guide-zh.md#7-gmail-集成) |
 | **主动助手** | 定时任务、后台检查 | Telegram + 心跳配置 | [定时任务](docs/guide-zh.md#8-定时任务与心跳检查) |
@@ -104,28 +104,12 @@ python -m inkagent
 
 # 运行 Telegram 机器人
 python -m inkagent.bot
+
+# 运行 WhatsApp 机器人（需要 libmagic，详见用户手册第 5 节）
+python -m inkagent.whatsapp_bot
 ```
 
-### WhatsApp 机器人
-
-通过非官方 WhatsApp Web 协议（`neonize` → `whatsmeow`）接入，**不需要 Meta Business 注册，不需要公网 webhook，不需要审批消息模板**——bot 作为 Linked Device 配对到你控制的某个 WhatsApp 账号。
-
-**强烈建议使用副号**（双卡 / WhatsApp Business app / 虚拟号都行）。配对到主号技术上可行，但 bot 会看到你所有聊天记录，且消息以你身份发出。
-
-```bash
-brew install libmagic           # macOS — neonize 运行时需要 libmagic
-                                # （Debian/Ubuntu：apt install libmagic1）
-
-# .env
-WHATSAPP_OWNER_PHONE=6591234567 # 你**主号**的纯数字手机号 + 国码，无 '+'
-
-python -m inkagent.whatsapp_bot # 首次运行会打印 QR——在副号上打开
-                                # WhatsApp > 已链接的设备 扫码完成配对
-```
-
-会话状态保存在 `memory/whatsapp_session.db`，删掉这个文件可强制重新配对。
-
-Telegram 机器人、多模型配置、Gmail、网页搜索、定时任务等更多功能请参阅[用户手册](docs/guide-zh.md)。
+Telegram 机器人、WhatsApp 机器人、多模型配置、Gmail、网页搜索、定时任务等更多功能请参阅[用户手册](docs/guide-zh.md)。
 
 ## 工作原理
 
