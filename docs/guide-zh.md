@@ -6,13 +6,12 @@
 2. [选择 LLM 提供商](#2-选择-llm-提供商)
 3. [记忆系统](#3-记忆系统)
 4. [Telegram 机器人](#4-telegram-机器人)
-5. [WhatsApp 机器人](#5-whatsapp-机器人)
-6. [Web 搜索](#6-web-搜索)
-7. [Gmail 集成](#7-gmail-集成)
-8. [定时任务与心跳检查](#8-定时任务与心跳检查)
-9. [自定义技能](#9-自定义技能)
-10. [会话控制](#10-会话控制)
-11. [完整环境变量参考](#11-完整环境变量参考)
+5. [Web 搜索](#5-web-搜索)
+6. [Gmail 集成](#6-gmail-集成)
+7. [定时任务与心跳检查](#7-定时任务与心跳检查)
+8. [自定义技能](#8-自定义技能)
+9. [会话控制](#9-会话控制)
+10. [完整环境变量参考](#10-完整环境变量参考)
 
 ---
 
@@ -73,12 +72,6 @@ docker run --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
   inkagent python -m inkagent.bot
-
-# WhatsApp 机器人模式（镜像里也要装 libmagic，详见第 5 节）
-docker run -it --env-file .env \
-  -v $(pwd)/memory:/app/memory \
-  -v $(pwd)/conversations:/app/conversations \
-  inkagent python -m inkagent.whatsapp_bot
 ```
 
 挂载 `memory/` 和 `conversations/` 目录，数据在容器重启后不会丢失。
@@ -279,89 +272,7 @@ python -m inkagent.bot
 
 ---
 
-## 5. WhatsApp 机器人
-
-通过 WhatsApp 跟 agent 对话——手机、网页、桌面端都能用。
-
-底层走非官方 WhatsApp Web 协议（`neonize` → `whatsmeow`），**不需要 Meta Business 注册，不需要公网 webhook，不需要审批消息模板**。bot 作为 Linked Device 配对到你控制的某个 WhatsApp 账号上。
-
-### 前置条件
-
-- 一个已配置好的 LLM 提供商（参见[第 2 节](#2-选择-llm-提供商)）
-- **一个专门给 bot 用的 WhatsApp 副号**（强烈建议——见下方"关于 bot 账号"）
-- 宿主机装了 `libmagic`
-
-### 配置步骤
-
-**第一步：安装 libmagic**
-
-```bash
-brew install libmagic                  # macOS
-sudo apt install libmagic1             # Debian / Ubuntu
-```
-
-`neonize` 启动时通过 dlopen 加载 `libmagic`，没装会 import 失败。
-
-**第二步：配置 `.env`**
-
-```bash
-# 你**主号**手机号（你给 bot 发消息时用的那个号），纯数字 + 国码，无 '+'
-# 例如：6591234567（新加坡 +65 91234567）
-WHATSAPP_OWNER_PHONE=6591234567
-```
-
-**第三步：启动并配对**
-
-```bash
-python -m inkagent.whatsapp_bot
-```
-
-终端会打印一个 QR 码。在 **bot 副号那台手机上**（不是你主号）：
-
-1. 打开 WhatsApp → **Linked Devices**（已链接的设备）
-2. 点击 **Link a device**（链接设备）
-3. 扫描终端里的 QR
-
-约 5–10 秒后会看到 `WhatsApp bot connected. Owner phone: ...`。配对状态保存在 `memory/whatsapp_session.db`，下次启动直接复用（不用再扫码）。
-
-### 验证
-
-从你**主号**给 bot 副号发条 `hi`，bot 几秒内回复即说明成功。
-
-### Bot 命令
-
-| 命令 | 说明 |
-|------|------|
-| `/new` | 归档当前对话，开始新会话 |
-| `/compact` | 压缩对话历史 |
-
-### 关于 bot 账号
-
-bot 作为 Linked Device 挂在**一个** WhatsApp 账号上，那个账号收到的所有消息它都看得到。三个用副号而不是主号的理由：
-
-1. **跟自己聊天体验差。** WhatsApp 没有 `@inkagent_bot` 这种独立 bot 实体——要"跟 bot 对话"就得有两端。如果 bot 就是你主号，你只能用"跟自己聊天"功能，发问和回答都显示成"me"。
-2. **bot 看见你所有聊天。** 配对到主号后，任何人发给你的消息都会进 bot 的事件流。
-3. **bot 以你的身份发消息。** agent 任何 bug / 提示注入都可能让 bot 替你给真人发消息。
-
-副号方案：双卡手机、WhatsApp Business app（可与普通 WhatsApp 在同一台手机并存）、虚拟号码都行。
-
-### 已知问题："AI from Meta" 隐私横幅
-
-主号给 bot 发消息时，WhatsApp 客户端会在每条消息上方显示类似 *"AI from Meta receives messages to improve AI quality and generate messages for this business"* 的横幅，bot 的每条回复也会带 "AI ✦" 标签。**这个无法去除**——WhatsApp 的分类器会把任何"非手机 app + 自动化回复模式"的 linked device 标记为 AI/business 客户端，即使副号本身是普通（非 Business）账号。
-
-横幅本身有点误导：端到端加密照旧（whatsmeow 直连 WhatsApp 服务端，Meta 看到的是密文），bot 跑在你自己机器上没经过 Meta AI。这只是 WhatsApp 对所有第三方 client 的通用 UI 警告。
-
-### 注意事项
-
-- 只有发送方手机号匹配 `WHATSAPP_OWNER_PHONE` 的消息会被处理；其他人发的消息静默丢弃
-- 已处理 LID 寻址——WhatsApp 用 LID 模式发消息时，bot 会从 `SenderAlt` 里取真正的手机号 JID 来做 owner 校验
-- WhatsApp 模式下定时任务自动启动，但只投递 session ID 以 `wa_` 开头的任务；如果同时跑 Telegram bot，两边各管各的（`tg_*` / `wa_*`）
-- 跑 agent 时显示 "正在输入..." 指示器（每 10 秒刷新一次）
-- 单条消息上限 4096 字符，超长回复自动拆分
-
----
-
-## 6. Web 搜索
+## 5. Web 搜索
 
 让 agent 具备搜索互联网的能力。
 
@@ -397,7 +308,7 @@ BRAVE_API_KEY=BSA-xxxxx
 
 ---
 
-## 7. Gmail 集成
+## 6. Gmail 集成
 
 让 agent 搜索、阅读和发送 Gmail 邮件。
 
@@ -452,13 +363,13 @@ GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
 
 ---
 
-## 8. 定时任务与心跳检查
+## 7. 定时任务与心跳检查
 
 让 agent 按时间表自动执行任务，主动通知你。
 
 ### 前置条件
 
-- Telegram 或 WhatsApp 机器人模式（定时任务需要常驻进程；CLI 模式下可创建任务，但需要某个 bot 运行时才触发）
+- Telegram 机器人模式（定时任务需要常驻进程；CLI 模式下可创建任务，但需要 bot 运行时才触发）
 
 ### 使用方法
 
@@ -523,13 +434,13 @@ agent 会创建一个 `silent_ok=true` 的 cron 任务。当没有需要注意�
 
 ### 注意事项
 
-- 每个定时任务绑定创建时的会话（Telegram chat 或 WhatsApp 主号），触发后消息发到同一个 chat。每个 bot 的 scheduler 只投递自己前缀的任务（`tg_*` / `wa_*`）
+- 每个定时任务绑定创建时的 Telegram chat，触发后消息发到同一个 chat。scheduler 只投递 session ID 匹配 bot 前缀（`tg_*`）的任务
 - 每次触发使用独立会话（带时间戳的 session ID），不会干扰正在进行的对话
 - 心跳的安静时段为 23:00-08:00（在 `skills/heartbeat/SKILL.md` 中定义），安静时段只通知紧急事项
 
 ---
 
-## 9. 自定义技能
+## 8. 自定义技能
 
 通过 Markdown 文件教 agent 新的工作流程，不需要写代码。技能指导 agent 如何组合现有工具完成特定任务。
 
@@ -590,7 +501,7 @@ requires:
 
 ---
 
-## 10. 会话控制
+## 9. 会话控制
 
 ### CLI 模式
 
@@ -608,13 +519,6 @@ requires:
 | `/new` | 归档当前对话，开始新会话 |
 | `/compact` | 压缩对话历史 |
 
-### WhatsApp 模式
-
-| 命令 | 说明 |
-|------|------|
-| `/new` | 归档当前对话，开始新会话 |
-| `/compact` | 压缩对话历史 |
-
 ### 何时使用 `/compact`
 
 当对话很长、agent 响应变慢或接近上下文窗口限制时使用。系统也会在上下文达到 80%（约 160k tokens）时自动触发压缩。
@@ -625,7 +529,7 @@ requires:
 
 ---
 
-## 11. 完整环境变量参考
+## 10. 完整环境变量参考
 
 以下是所有环境变量的汇总。完整的模板参见项目根目录的 `.env.example`。
 
@@ -651,12 +555,6 @@ requires:
 |------|------|------|
 | `TELEGRAM_BOT_TOKEN` | bot 模式必填 | BotFather 提供的 token |
 | `TELEGRAM_OWNER_ID` | bot 模式必填 | 你的 Telegram 数字用户 ID |
-
-### WhatsApp
-
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `WHATSAPP_OWNER_PHONE` | WhatsApp bot 模式必填 | 你的手机号（纯数字 + 国码，无 `+`，例如 `6591234567`）。bot 只接受这个号发来的消息；首次启动需扫码把 bot 配对到**另一个** WhatsApp 账号。 |
 
 ### Web 搜索
 

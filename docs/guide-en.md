@@ -6,13 +6,12 @@
 2. [Choosing an LLM Provider](#2-choosing-an-llm-provider)
 3. [Memory System](#3-memory-system)
 4. [Telegram Bot](#4-telegram-bot)
-5. [WhatsApp Bot](#5-whatsapp-bot)
-6. [Web Search](#6-web-search)
-7. [Gmail Integration](#7-gmail-integration)
-8. [Scheduled Tasks & Heartbeat](#8-scheduled-tasks--heartbeat)
-9. [Custom Skills](#9-custom-skills)
-10. [Session Control](#10-session-control)
-11. [Environment Variables Reference](#11-environment-variables-reference)
+5. [Web Search](#5-web-search)
+6. [Gmail Integration](#6-gmail-integration)
+7. [Scheduled Tasks & Heartbeat](#7-scheduled-tasks--heartbeat)
+8. [Custom Skills](#8-custom-skills)
+9. [Session Control](#9-session-control)
+10. [Environment Variables Reference](#10-environment-variables-reference)
 
 ---
 
@@ -73,12 +72,6 @@ docker run --env-file .env \
   -v $(pwd)/memory:/app/memory \
   -v $(pwd)/conversations:/app/conversations \
   inkagent python -m inkagent.bot
-
-# WhatsApp bot mode (also requires libmagic in the image; see Section 5)
-docker run -it --env-file .env \
-  -v $(pwd)/memory:/app/memory \
-  -v $(pwd)/conversations:/app/conversations \
-  inkagent python -m inkagent.whatsapp_bot
 ```
 
 Mount `memory/` and `conversations/` to persist data across container restarts.
@@ -279,111 +272,7 @@ Send any message to your bot on Telegram. If it replies, the setup is complete.
 
 ---
 
-## 5. WhatsApp Bot
-
-Chat with the agent via WhatsApp from any device — phone, web, or desktop.
-
-Connects via the unofficial WhatsApp Web protocol (`neonize` → `whatsmeow`),
-so **no Meta Business approval, no public webhook, no message-template
-gymnastics**. The bot pairs as a Linked Device on a WhatsApp account you
-control.
-
-### Prerequisites
-
-- A configured LLM provider (see [Section 2](#2-choosing-an-llm-provider))
-- A **dedicated WhatsApp number** for the bot (strongly recommended — see "About the bot account" below)
-- `libmagic` installed on the host
-
-### Setup
-
-**Step 1: Install libmagic**
-
-```bash
-brew install libmagic                  # macOS
-sudo apt install libmagic1             # Debian / Ubuntu
-```
-
-`neonize` dlopens `libmagic` at startup; without it the import fails.
-
-**Step 2: Configure `.env`**
-
-```bash
-# Your OWN phone (the one you'll message the bot from), digits only
-# with country code, no '+'. Example: 6591234567 (Singapore +65 91234567).
-WHATSAPP_OWNER_PHONE=6591234567
-```
-
-**Step 3: Launch and pair**
-
-```bash
-python -m inkagent.whatsapp_bot
-```
-
-A QR code prints in the terminal. On the **bot's phone** (the dedicated
-account, not your main number):
-
-1. Open WhatsApp → **Linked Devices**
-2. Tap **Link a device**
-3. Scan the terminal QR
-
-After ~5–10 seconds you'll see `WhatsApp bot connected. Owner phone: ...`.
-Pairing state is persisted to `memory/whatsapp_session.db`; subsequent
-launches reuse it (no QR needed).
-
-### Verify
-
-From your **main number**, message the bot's WhatsApp number with `hi`.
-It should reply within seconds.
-
-### Bot Commands
-
-| Command | Description |
-|---------|-------------|
-| `/new` | Archive current conversation and start a new session |
-| `/compact` | Compress conversation history |
-
-### About the bot account
-
-The bot pairs as a Linked Device on **one** WhatsApp account, and any
-message that account receives is visible to the bot. Three reasons to
-use a dedicated number rather than your main one:
-
-1. **Self-chat is awkward.** WhatsApp has no `@inkagent_bot` handle —
-   to "talk to the bot" you message its number from another number.
-   You can't easily message yourself.
-2. **The bot sees every chat.** If paired to your main number, every
-   message anyone sends you becomes a bot event.
-3. **The bot replies as you.** Any bug in the agent could send messages
-   under your identity to real people.
-
-Get a dedicated number via dual-SIM, the WhatsApp Business app
-(coexists with regular WhatsApp on the same phone), or a virtual number.
-
-### Known: "AI from Meta" disclosure banner
-
-When you message the bot, WhatsApp shows a privacy banner like *"AI from
-Meta receives messages to improve AI quality and generate messages for
-this business"* and labels each bot reply with an "AI ✦" badge. **This
-is unavoidable** — WhatsApp's classifier flags messages from any
-non-mobile-app linked device that exhibits automated reply patterns,
-even when the bot account is regular (non-Business) WhatsApp.
-
-The disclosure is misleading: end-to-end encryption still applies and
-Meta does not actually see message content (the bot runs on your
-machine via a direct whatsmeow socket). It's purely a UI warning that
-WhatsApp now shows for any third-party automation client.
-
-### Notes
-
-- Only the sender matching `WHATSAPP_OWNER_PHONE` is processed; messages from anyone else are dropped silently
-- LID addressing is handled — when WhatsApp routes via LID, the phone-form JID in `SenderAlt` is used for the owner check
-- Scheduler (cron) starts automatically in WhatsApp mode and only delivers jobs whose session ID starts with `wa_`; if a Telegram bot is also running, each delivers its own
-- Replies show a "typing…" indicator (refreshed every 10s) while the agent is composing
-- Single message limit is 4096 characters; longer replies are split
-
----
-
-## 6. Web Search
+## 5. Web Search
 
 Give the agent the ability to search the internet.
 
@@ -419,7 +308,7 @@ After launching, tell the agent "search for today's news". The agent will call t
 
 ---
 
-## 7. Gmail Integration
+## 6. Gmail Integration
 
 Let the agent search, read, and send Gmail messages.
 
@@ -474,13 +363,13 @@ After launching, tell the agent "check my unread emails". The agent will call th
 
 ---
 
-## 8. Scheduled Tasks & Heartbeat
+## 7. Scheduled Tasks & Heartbeat
 
 Let the agent execute tasks on a schedule and proactively notify you.
 
 ### Prerequisites
 
-- Telegram or WhatsApp bot mode (scheduled tasks require a long-running process; tasks created in CLI mode only fire when a bot is running)
+- Telegram bot mode (scheduled tasks require a long-running process; tasks created in CLI mode only fire when a bot is running)
 
 ### Usage
 
@@ -545,13 +434,13 @@ Confirm the heartbeat task has been created.
 
 ### Notes
 
-- Each scheduled task is bound to the session (Telegram chat or WhatsApp owner) where it was created; triggered messages are sent to the same chat. Each bot's scheduler only delivers jobs for its own prefix (`tg_*` or `wa_*`)
+- Each scheduled task is bound to the Telegram chat where it was created; triggered messages are sent to the same chat. The scheduler only delivers jobs whose session ID matches the bot's prefix (`tg_*`)
 - Each trigger uses an independent session (timestamped session ID), so it won't interfere with ongoing conversations
 - Heartbeat quiet hours are 23:00-08:00 (defined in `skills/heartbeat/SKILL.md`); only urgent items are notified during quiet hours
 
 ---
 
-## 9. Custom Skills
+## 8. Custom Skills
 
 Teach the agent new workflows through Markdown files — no code required. Skills guide the agent on how to combine existing tools to accomplish specific tasks.
 
@@ -612,7 +501,7 @@ The repo ships with one skill under `skills/`:
 
 ---
 
-## 10. Session Control
+## 9. Session Control
 
 ### CLI Mode
 
@@ -630,13 +519,6 @@ The repo ships with one skill under `skills/`:
 | `/new` | Archive current conversation and start a new session |
 | `/compact` | Compress conversation history |
 
-### WhatsApp Mode
-
-| Command | Description |
-|---------|-------------|
-| `/new` | Archive current conversation and start a new session |
-| `/compact` | Compress conversation history |
-
 ### When to Use `/compact`
 
 Use when conversations get long, the agent responds slowly, or you're approaching the context window limit. The system also triggers compression automatically when context reaches 80% (~160k tokens).
@@ -647,7 +529,7 @@ Conversation history is automatically saved in the `conversations/` directory (J
 
 ---
 
-## 11. Environment Variables Reference
+## 10. Environment Variables Reference
 
 A summary of all environment variables. See `.env.example` in the project root for the full template.
 
@@ -673,12 +555,6 @@ A summary of all environment variables. See `.env.example` in the project root f
 |----------|----------|-------------|
 | `TELEGRAM_BOT_TOKEN` | For bot mode | Bot token from BotFather |
 | `TELEGRAM_OWNER_ID` | For bot mode | Your numeric Telegram user ID |
-
-### WhatsApp
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `WHATSAPP_OWNER_PHONE` | For WhatsApp bot mode | Your phone number (digits only with country code, no `+`, e.g. `6591234567`). The bot accepts messages only from this number; pair the bot to a *different* WhatsApp account on first run. |
 
 ### Web Search
 

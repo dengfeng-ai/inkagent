@@ -41,10 +41,9 @@
 |------|-----------|---------|------|
 | **从这里开始** | 在终端和 AI 对话 | 一个 API Key | [快速开始](#快速开始) |
 | **移动访问** | 通过 Telegram 随时聊天 | + Telegram Bot Token | [Telegram 机器人](docs/guide-zh.md#4-telegram-机器人) |
-| **WhatsApp 访问** | 通过 WhatsApp 在任何设备上聊天 | + WhatsApp 主号手机号（QR 配对） | [WhatsApp 机器人](docs/guide-zh.md#5-whatsapp-机器人) |
-| **联网助手** | Agent 可以搜索互联网 | + Brave API Key | [Web 搜索](docs/guide-zh.md#6-web-搜索) |
-| **邮件助手** | Agent 可以读写 Gmail | + Gmail 应用专用密码 | [Gmail 集成](docs/guide-zh.md#7-gmail-集成) |
-| **主动助手** | 定时任务、后台检查 | Telegram + 心跳配置 | [定时任务](docs/guide-zh.md#8-定时任务与心跳检查) |
+| **联网助手** | Agent 可以搜索互联网 | + Brave API Key | [Web 搜索](docs/guide-zh.md#5-web-搜索) |
+| **邮件助手** | Agent 可以读写 Gmail | + Gmail 应用专用密码 | [Gmail 集成](docs/guide-zh.md#6-gmail-集成) |
+| **主动助手** | 定时任务、后台检查 | Telegram + 心跳配置 | [定时任务](docs/guide-zh.md#7-定时任务与心跳检查) |
 | **更强记忆** | 对历史对话进行语义搜索 | + OpenAI API Key（用于 embedding） | [记忆搜索](docs/guide-zh.md#3-记忆系统) |
 
 > **没有 API Key？** 设置 `LLM_PROVIDER=openai-codex` 即可使用你的 ChatGPT Plus/Pro 订阅运行。详见[模型配置指南](docs/guide-zh.md#2-选择-llm-提供商)。
@@ -104,12 +103,9 @@ python -m inkagent
 
 # 运行 Telegram 机器人
 python -m inkagent.bot
-
-# 运行 WhatsApp 机器人（需要 libmagic，详见用户手册第 5 节）
-python -m inkagent.whatsapp_bot
 ```
 
-Telegram 机器人、WhatsApp 机器人、多模型配置、Gmail、网页搜索、定时任务等更多功能请参阅[用户手册](docs/guide-zh.md)。
+Telegram 机器人、多模型配置、Gmail、网页搜索、定时任务等更多功能请参阅[用户手册](docs/guide-zh.md)。
 
 ## 工作原理
 
@@ -122,7 +118,6 @@ inkagent 是一个 Agent 循环：你发送消息 → LLM 决定调用哪些工�
 - [x] CLI + Shell 工具 + Markdown 记忆
 - [x] LLM 可观测性（Langfuse）
 - [x] Telegram 机器人
-- [x] WhatsApp 机器人（neonize / whatsmeow，扫码配对，无需公网 webhook）
 - [x] 长期记忆 + 每日日志 + 自动晋升
 - [x] 文件操作工具（读、写、编辑、列目录）
 - [x] 定时任务（Cron 调度器 + 工具）
