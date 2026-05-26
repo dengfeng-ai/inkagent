@@ -30,7 +30,7 @@
 - **本地运行** — 数据留在你自己的机器上，不存在别人的云里
 - **Markdown 记忆** — 人设、用户档案、长期记忆、每日日志，全部是你拥有的 `.md` 文件
 - **渐进式使用** — 从 CLI 聊天开始，按需添加 Telegram、网页搜索、Gmail、定时任务
-- **多模型支持** — Claude、OpenAI 或 ChatGPT 订阅（无需 API Key），一个环境变量切换
+- **多模型支持** — Claude、OpenAI、ChatGPT 订阅，或任何 OpenAI 兼容网关（LiteLLM、OpenRouter、vLLM、Ollama……），一个环境变量切换
 - **易于扩展** — 用一个 Markdown 文件教会 Agent 新工作流，无需写代码
 
 ## 按需配置

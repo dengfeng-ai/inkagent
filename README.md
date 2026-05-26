@@ -31,7 +31,7 @@
 - **Runs locally** — your data stays on your machine, not in someone else's cloud
 - **Markdown memory** — persona, user profile, long-term memory, daily logs — all plain `.md` files you own and can read
 - **Grows with you** — start with a CLI chat, add Telegram, web search, Gmail, scheduled tasks as you need them
-- **Multi-provider** — Claude, OpenAI, or ChatGPT subscription (no API key needed), switchable via one env var
+- **Multi-provider** — Claude, OpenAI, ChatGPT subscription, or any OpenAI-compatible gateway (LiteLLM, OpenRouter, vLLM, Ollama…), switchable via one env var
 - **Extensible** — teach the agent new workflows with a Markdown file, no code needed
 
 ## Choose Your Setup
