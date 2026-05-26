@@ -15,7 +15,10 @@ _COMPLETION_TOKENS_PREFIXES = ("o1", "o3", "o4", "gpt-5")
 
 
 def _needs_completion_tokens(model: str) -> bool:
-    return any(model.startswith(p) for p in _COMPLETION_TOKENS_PREFIXES)
+    # Strip routing prefixes used by gateways/proxies (e.g. "azure/gpt-5.4-mini",
+    # "openrouter/openai/gpt-5") so model-family detection still works.
+    name = model.rsplit("/", 1)[-1]
+    return any(name.startswith(p) for p in _COMPLETION_TOKENS_PREFIXES)
 
 
 class OpenAIProvider(LLMProvider):
