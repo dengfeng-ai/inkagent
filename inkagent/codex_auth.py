@@ -210,6 +210,12 @@ def get_codex_auth() -> CodexAuth:
 # ── CLI entry point ──────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    # Windows console defaults to cp1252 / charmap. Force UTF-8 so any
+    # non-ASCII content (URLs, error messages) doesn't crash print().
+    if sys.platform == "win32":
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
     logging.basicConfig(level=logging.INFO)
     auth = CodexAuth()
 
