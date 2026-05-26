@@ -3,9 +3,16 @@
 import asyncio
 import logging
 import os
+import sys
 import threading
 import time
 from dataclasses import dataclass
+
+# Windows console defaults to cp1252 / charmap, which can't encode emoji
+# in log messages (e.g. avatar from IDENTITY.md). Force UTF-8.
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from dotenv import load_dotenv
 load_dotenv()

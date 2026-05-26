@@ -4,6 +4,12 @@ import logging
 import os
 import sys
 
+# Windows console defaults to cp1252 / charmap, which can't encode emoji
+# (e.g. avatar in IDENTITY.md). Force UTF-8 so print() doesn't crash.
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from dotenv import load_dotenv
 load_dotenv()
 
