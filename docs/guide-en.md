@@ -90,7 +90,7 @@ After launching, type any message. If the agent replies normally, the setup is c
 
 ## 2. Choosing an LLM Provider
 
-inkagent supports three LLM providers, switchable via `LLM_PROVIDER` in `.env`.
+inkagent supports four LLM providers, switchable via `LLM_PROVIDER` in `.env`.
 
 ### Option A: Anthropic
 
@@ -153,14 +153,36 @@ python -m inkagent.codex_auth status
 
 **Note:** Codex mode is subject to ChatGPT subscription usage limits. It does not support embeddings — memory search still requires `OPENAI_API_KEY`.
 
+### Option D: OpenAI-compatible Gateway
+
+For any gateway that speaks the OpenAI Chat Completions protocol — LiteLLM, OpenRouter, Together, Fireworks, vLLM, Ollama, your company's internal proxy, etc.
+
+```bash
+LLM_PROVIDER=openai-compatible
+LLM_BASE_URL=https://litellm.example.com
+LLM_API_KEY=sk-xxxxx
+LLM_MODEL=azure/gpt-5.4-mini
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LLM_BASE_URL` | — | Gateway base URL (required). No `/chat/completions` suffix — the SDK appends it. |
+| `LLM_API_KEY` | `sk-noauth` | Bearer token. Default works for open gateways with no auth. |
+| `LLM_MODEL` | — | Main model name as the gateway expects it (e.g. `azure/gpt-5.4-mini`). Required. |
+| `LLM_SMALL_MODEL` | falls back to `LLM_MODEL` | Small model for compression/memory promotion. |
+| `LLM_VERIFY_SSL` | `true` | Set `false` only for internal self-signed certs. |
+| `LLM_EXTRA_HEADERS` | — | JSON object of extra HTTP headers, e.g. `{"x-tenant":"team-a"}`. |
+
+**Note:** Embeddings still go directly to OpenAI — memory search requires `OPENAI_API_KEY` independently of the gateway.
+
 ### Provider Comparison
 
-| Feature | Anthropic | OpenAI | Codex |
-|---------|-----------|--------|-------|
-| Requires API key | Yes | Yes | No |
-| Pay-per-use | Yes | Yes | No (subscription) |
-| Memory search | Requires separate `OPENAI_API_KEY` | Available automatically | Requires separate `OPENAI_API_KEY` |
-| Tool calling | Supported | Supported | Supported |
+| Feature | Anthropic | OpenAI | Codex | OpenAI-compatible |
+|---------|-----------|--------|-------|-------------------|
+| Requires API key | Yes | Yes | No | Gateway-dependent |
+| Pay-per-use | Yes | Yes | No (subscription) | Gateway-dependent |
+| Memory search | Requires separate `OPENAI_API_KEY` | Available automatically | Requires separate `OPENAI_API_KEY` | Requires separate `OPENAI_API_KEY` |
+| Tool calling | Supported | Supported | Supported | Supported (if the gateway implements it) |
 
 ---
 
@@ -537,11 +559,15 @@ A summary of all environment variables. See `.env.example` in the project root f
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `LLM_PROVIDER` | No | `anthropic` | `anthropic`, `openai`, or `openai-codex` |
-| `LLM_MODEL` | No | Varies by provider | Main model name |
-| `LLM_SMALL_MODEL` | No | Varies by provider | Small model (for compression/memory promotion) |
+| `LLM_PROVIDER` | No | `anthropic` | `anthropic`, `openai`, `openai-codex`, or `openai-compatible` |
+| `LLM_MODEL` | No (required for `openai-compatible`) | Varies by provider | Main model name |
+| `LLM_SMALL_MODEL` | No | Varies by provider | Small model (for compression/memory promotion). For `openai-compatible`, falls back to `LLM_MODEL`. |
 | `ANTHROPIC_API_KEY` | For Anthropic | — | Anthropic API key |
 | `OPENAI_API_KEY` | For OpenAI | — | OpenAI API key |
+| `LLM_BASE_URL` | For `openai-compatible` | — | Gateway base URL (e.g. `https://litellm.example.com`) |
+| `LLM_API_KEY` | No | `sk-noauth` | Bearer token for `openai-compatible` gateways |
+| `LLM_VERIFY_SSL` | No | `true` | Set `false` to skip TLS verification (self-signed certs only) |
+| `LLM_EXTRA_HEADERS` | No | — | JSON object of extra HTTP headers for every request |
 
 ### Memory Search
 

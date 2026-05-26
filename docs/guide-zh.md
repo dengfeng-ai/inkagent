@@ -90,7 +90,7 @@ docker run --env-file .env \
 
 ## 2. 选择 LLM 提供商
 
-inkagent 支持三种 LLM 提供商，通过 `.env` 中的 `LLM_PROVIDER` 切换。
+inkagent 支持四种 LLM 提供商，通过 `.env` 中的 `LLM_PROVIDER` 切换。
 
 ### 方式 A：Anthropic
 
@@ -153,14 +153,36 @@ python -m inkagent.codex_auth status
 
 **注意：** Codex 模式受 ChatGPT 订阅用量限制；不支持 embedding，记忆搜索仍需设置 `OPENAI_API_KEY`。
 
+### 方式 D：OpenAI 兼容网关
+
+适用于任何讲 OpenAI Chat Completions 协议的网关 —— LiteLLM、OpenRouter、Together、Fireworks、vLLM、Ollama，或公司内部代理等。
+
+```bash
+LLM_PROVIDER=openai-compatible
+LLM_BASE_URL=https://litellm.example.com
+LLM_API_KEY=sk-xxxxx
+LLM_MODEL=azure/gpt-5.4-mini
+```
+
+| 环境变量 | 默认值 | 说明 |
+|----------|--------|------|
+| `LLM_BASE_URL` | — | 网关 base URL（必填）。不要带 `/chat/completions` 后缀 —— SDK 自动追加。 |
+| `LLM_API_KEY` | `sk-noauth` | Bearer token。免认证网关用默认值即可。 |
+| `LLM_MODEL` | — | 网关识别的模型名（如 `azure/gpt-5.4-mini`）。必填。 |
+| `LLM_SMALL_MODEL` | 回落到 `LLM_MODEL` | 用于压缩/记忆提升的小模型。 |
+| `LLM_VERIFY_SSL` | `true` | 仅当连接内网自签证书时才设为 `false`。 |
+| `LLM_EXTRA_HEADERS` | — | 额外请求头的 JSON 对象，如 `{"x-tenant":"team-a"}`。 |
+
+**注意：** Embedding 仍直接走 OpenAI —— 记忆搜索需独立设置 `OPENAI_API_KEY`，与网关无关。
+
 ### 提供商功能对比
 
-| 功能 | Anthropic | OpenAI | Codex |
-|------|-----------|--------|-------|
-| 需要 API key | 是 | 是 | 否 |
-| 按量付费 | 是 | 是 | 否（订阅制） |
-| 记忆搜索 | 需额外设 `OPENAI_API_KEY` | 自动可用 | 需额外设 `OPENAI_API_KEY` |
-| 工具调用 | 支持 | 支持 | 支持 |
+| 功能 | Anthropic | OpenAI | Codex | OpenAI 兼容 |
+|------|-----------|--------|-------|-------------|
+| 需要 API key | 是 | 是 | 否 | 取决于网关 |
+| 按量付费 | 是 | 是 | 否（订阅制） | 取决于网关 |
+| 记忆搜索 | 需额外设 `OPENAI_API_KEY` | 自动可用 | 需额外设 `OPENAI_API_KEY` | 需额外设 `OPENAI_API_KEY` |
+| 工具调用 | 支持 | 支持 | 支持 | 网关支持时可用 |
 
 ---
 
@@ -537,11 +559,15 @@ requires:
 
 | 变量 | 必填 | 默认值 | 说明 |
 |------|------|--------|------|
-| `LLM_PROVIDER` | 否 | `anthropic` | `anthropic`、`openai` 或 `openai-codex` |
-| `LLM_MODEL` | 否 | 因提供商而异 | 主模型名称 |
-| `LLM_SMALL_MODEL` | 否 | 因提供商而异 | 小模型（压缩/记忆提升用） |
+| `LLM_PROVIDER` | 否 | `anthropic` | `anthropic`、`openai`、`openai-codex` 或 `openai-compatible` |
+| `LLM_MODEL` | 否（`openai-compatible` 必填） | 因提供商而异 | 主模型名称 |
+| `LLM_SMALL_MODEL` | 否 | 因提供商而异 | 小模型（压缩/记忆提升用）。`openai-compatible` 下回落到 `LLM_MODEL`。 |
 | `ANTHROPIC_API_KEY` | Anthropic 必填 | — | Anthropic API key |
 | `OPENAI_API_KEY` | OpenAI 必填 | — | OpenAI API key |
+| `LLM_BASE_URL` | `openai-compatible` 必填 | — | 网关 base URL（如 `https://litellm.example.com`） |
+| `LLM_API_KEY` | 否 | `sk-noauth` | `openai-compatible` 网关的 Bearer token |
+| `LLM_VERIFY_SSL` | 否 | `true` | 设为 `false` 可跳过 TLS 校验（仅限内网自签证书） |
+| `LLM_EXTRA_HEADERS` | 否 | — | 每次请求附加的额外 HTTP 头（JSON 对象） |
 
 ### 记忆搜索
 
