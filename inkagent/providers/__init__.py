@@ -1,8 +1,8 @@
 """LLM provider factory.
 
 Provider and model selection via environment variables:
-    LLM_PROVIDER  — "anthropic" (default), "openai", or "openai-codex"
-    LLM_MODEL     — main model name (provider-specific default if unset)
+    LLM_PROVIDER  — "anthropic" (default), "openai", "openai-codex", or "openai-compatible"
+    LLM_MODEL     — main model name (provider-specific default if unset; required for openai-compatible)
 """
 
 from __future__ import annotations
@@ -44,6 +44,10 @@ def get_provider() -> LLMProvider:
             from inkagent.providers.openai_codex import OpenAICodexProvider
 
             _provider_instance = OpenAICodexProvider()
+        elif name == "openai-compatible":
+            from inkagent.providers.openai_compatible import OpenAICompatibleProvider
+
+            _provider_instance = OpenAICompatibleProvider()
         elif name == "openai":
             from inkagent.providers.openai import OpenAIProvider
 
@@ -55,15 +59,31 @@ def get_provider() -> LLMProvider:
     return _provider_instance
 
 
+def _require_model_env(name: str, var: str) -> str:
+    value = os.environ.get(var)
+    if not value:
+        raise RuntimeError(
+            f"LLM_PROVIDER={name} requires {var} to be set "
+            "(model names are gateway-specific, e.g. 'azure/gpt-5.4-mini')."
+        )
+    return value
+
+
 def get_model() -> str:
     """Return the main model name from env or provider default."""
     name = get_provider_name()
+    if name == "openai-compatible":
+        return _require_model_env(name, "LLM_MODEL")
     return os.environ.get("LLM_MODEL", _DEFAULTS.get(name, _DEFAULTS["anthropic"])["model"])
 
 
 def get_small_model() -> str:
     """Return the small/cheap model for auxiliary tasks (compression, promotion)."""
     name = get_provider_name()
+    if name == "openai-compatible":
+        # Fall back to main model when small model is not configured; gateways
+        # don't have a one-size-fits-all small-model name.
+        return os.environ.get("LLM_SMALL_MODEL") or get_model()
     return os.environ.get(
         "LLM_SMALL_MODEL",
         _DEFAULTS.get(name, _DEFAULTS["anthropic"])["small_model"],

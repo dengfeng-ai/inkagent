@@ -51,9 +51,13 @@ Both the CLI and the bot call `load_dotenv()` at startup, so set these in a proj
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `openai-codex` |
-| `LLM_MODEL` | per-provider | Main model (defaults: `claude-opus-4-6`, `gpt-5.4`) |
-| `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (defaults: `claude-sonnet-4-6`, `gpt-5.4-mini`) |
+| `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, `openai-codex`, or `openai-compatible` |
+| `LLM_MODEL` | per-provider | Main model (defaults: `claude-opus-4-6`, `gpt-5.4`). Required for `openai-compatible`. |
+| `LLM_SMALL_MODEL` | per-provider | Cheap model for compression/promotion (defaults: `claude-sonnet-4-6`, `gpt-5.4-mini`). For `openai-compatible`, falls back to `LLM_MODEL`. |
+| `LLM_BASE_URL` | — | Required for `openai-compatible`. Base URL of the gateway (e.g. `https://litellm.example.com`). |
+| `LLM_API_KEY` | `sk-noauth` | Bearer token for `openai-compatible` gateways. |
+| `LLM_VERIFY_SSL` | `true` | Set to `false` to skip TLS verification for `openai-compatible` (internal self-signed certs only). |
+| `LLM_EXTRA_HEADERS` | — | JSON object of extra HTTP headers sent on every `openai-compatible` request (e.g. `{"x-tenant":"team-a"}`). |
 | `INKAGENT_TIMEZONE` | system local, else `Asia/Singapore` | IANA timezone used for cron jobs and prompt time injection |
 | `LANGFUSE_PUBLIC_KEY` | — | Enables Langfuse tracing when set (also needs `LANGFUSE_SECRET_KEY` and the `[langfuse]` extra). No-op when unset. |
 | `BRAVE_API_KEY` | — | Required for `web_search` tool |
@@ -185,6 +189,16 @@ The `openai-codex` provider runs inkagent using a **ChatGPT Plus/Pro subscriptio
 - **API endpoint**: `https://chatgpt.com/backend-api/codex/responses` (Responses API format).
 - **Login**: `python -m inkagent.codex_auth` opens a browser for one-time consent.
 - **Limitations**: subject to ChatGPT subscription usage quotas; no embeddings (vector search still needs `OPENAI_API_KEY`).
+
+### OpenAI-Compatible Provider
+
+The `openai-compatible` provider targets any gateway/proxy speaking the OpenAI Chat Completions protocol (LiteLLM, OpenRouter, Together, Fireworks, vLLM, Ollama, ...). It is a thin subclass of `OpenAIProvider` that only swaps the HTTP client configuration.
+
+- **Required**: `LLM_BASE_URL`, `LLM_MODEL`. `LLM_API_KEY` defaults to `sk-noauth` for open gateways.
+- **TLS**: defaults to verifying certificates; set `LLM_VERIFY_SSL=false` only for internal self-signed certs.
+- **Extra headers**: `LLM_EXTRA_HEADERS` (JSON object) for tenant/trace headers.
+- **Model name handling**: `_needs_completion_tokens` strips routing prefixes (`azure/…`, `openrouter/…`), so prefixed names still map to the right token-param.
+- **Embeddings**: unchanged — `vector_store` still calls OpenAI directly via `OPENAI_API_KEY`.
 
 ## File Safety
 
