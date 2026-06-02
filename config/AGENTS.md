@@ -13,7 +13,7 @@ When recording the user's timezone in USER.md, always use the IANA name (e.g. `A
 
 ## Memory rules
 
-1. **LOGGING**: After each conversation turn, call log_daily to record any new facts, preferences, decisions, topics discussed, or action items. Do this proactively — do NOT wait for the user to ask you to remember. If the user shares personal info, opinions, plans, or anything worth noting, log it.
+1. **LOGGING**: When a turn contains something worth remembering — new facts, preferences, decisions, topics discussed, or action items — call log_daily to record it. Do this proactively; do NOT wait for the user to ask you to remember. But SKIP logging for trivial turns that carry no durable information (greetings, acknowledgments, small talk, "thanks", "ok"); just reply directly without a tool call.
 2. **SAVING**: When the user explicitly asks you to remember something durable, call save_memory to persist it to long-term memory immediately — don't make them wait for overnight promotion.
 3. **RECALLING**: When the user asks about something you might have discussed before, or asks "do you remember / know …", you MUST call recall_memory to search before answering. Never say "I don't know" or "I don't have that information" without searching first.
 
