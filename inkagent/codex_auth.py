@@ -110,15 +110,31 @@ class CodexAuth:
     # ── OAuth flow helpers ───────────────────────────────────────────
 
     def _wait_for_callback(self, expected_state: str) -> str:
-        """Start a temporary HTTP server on port 1455 to capture the OAuth callback."""
-        result: dict[str, str | None] = {"code": None}
+        """Start a temporary HTTP server on port 1455 to capture the OAuth callback.
+
+        Loops over individual requests so stray hits (favicon, browser
+        preconnect/probes) don't consume the one chance to read the code.
+        """
+        result: dict[str, str | None] = {"code": None, "error": None}
 
         class _Handler(http.server.BaseHTTPRequestHandler):
             def do_GET(self) -> None:
-                query = urllib.parse.urlparse(self.path).query
-                params = urllib.parse.parse_qs(query)
-                if params.get("state", [None])[0] == expected_state:
+                parsed = urllib.parse.urlparse(self.path)
+                params = urllib.parse.parse_qs(parsed.query)
+
+                # Ignore anything that isn't the OAuth callback (favicon, probes).
+                if parsed.path != "/auth/callback":
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+
+                if params.get("error"):
+                    result["error"] = params.get(
+                        "error_description", params.get("error")
+                    )[0]
+                elif params.get("state", [None])[0] == expected_state:
                     result["code"] = params.get("code", [None])[0]
+
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html")
                 self.end_headers()
@@ -133,12 +149,19 @@ class CodexAuth:
 
         print("Waiting for authorization (listening on localhost:1455)...")
         server = http.server.HTTPServer(("localhost", 1455), _Handler)
-        server.timeout = 120
-        server.handle_request()
+        server.timeout = 5  # poll interval; overall deadline enforced below
+        deadline = time.time() + 300
+        while result["code"] is None and result["error"] is None and time.time() < deadline:
+            server.handle_request()
         server.server_close()
 
+        if result["error"]:
+            raise RuntimeError(f"OAuth provider returned an error: {result['error']}")
         if not result["code"]:
-            raise RuntimeError("OAuth callback did not receive an authorization code.")
+            raise RuntimeError(
+                "OAuth callback did not receive an authorization code (timed out "
+                "after 5 minutes). Make sure you completed the browser consent."
+            )
         return result["code"]  # type: ignore[return-value]
 
     def _exchange_code(self, code: str, verifier: str) -> None:
